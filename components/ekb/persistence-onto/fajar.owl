@@ -1,0 +1,140 @@
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns="http://cdl.ifs.tuwien.ac.at/jena#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" > 
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#value">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#SubModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#test/A1">
+    <subs rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#test/sb2"/>
+    <subs rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#test/sb1"/>
+    <name>A1_Fajar</name>
+    <id>A1</id>
+    <rdf:type rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#TestModel"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#id">
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#SubModel"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#TestModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#domainId">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#CommitInfo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#test/sb2">
+    <value>sb2value</value>
+    <id>sb2</id>
+    <rdf:type rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#SubModel"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#TestModel">
+    <hasModelInfo rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo_TestModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#hasCommitInfo">
+    <rdfs:range rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#CommitInfo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#sub">
+    <rdfs:range rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#SubModel"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#TestModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo_TestModel">
+    <modelTypeVersion>1.0.0</modelTypeVersion>
+    <modelType>org.openengsb.core.ekb.persistence.onto.internal.models.TestModel</modelType>
+    <rdf:type rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#name">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#TestModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#test/sb1">
+    <value>sb1value</value>
+    <id>sb1</id>
+    <rdf:type rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#SubModel"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#test/A3">
+    <sub rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#test/sb1"/>
+    <name>A3_Fajar</name>
+    <id>A3</id>
+    <rdf:type rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#TestModel"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#hasModelInfo">
+    <rdfs:range rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#test/A2">
+    <name>A2_Fajar</name>
+    <id>A2</id>
+    <rdf:type rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#TestModel"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#modelType">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#commitInfo_1405466629193">
+    <instanceId>testinstance</instanceId>
+    <domainId>testdomain</domainId>
+    <connectorId>testconnector</connectorId>
+    <contextId>test</contextId>
+    <commitTime>1405466629193</commitTime>
+    <rdf:type rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#CommitInfo"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#CommitInfo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#modelTypeVersion">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#SubModel">
+    <hasModelInfo rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo_SubModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#contextId">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#CommitInfo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo_SubModel">
+    <modelTypeVersion>1.0.0</modelTypeVersion>
+    <modelType>org.openengsb.core.ekb.persistence.onto.internal.models.SubModel</modelType>
+    <rdf:type rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#ModelInfo"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#commitTime">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#CommitInfo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#subs">
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#TestModel"/>
+    <rdfs:range rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#SubModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#instanceId">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#CommitInfo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena">
+    <hasCommitInfo rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#commitInfo_1405466629193"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Ontology"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://cdl.ifs.tuwien.ac.at/jena#connectorId">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdl.ifs.tuwien.ac.at/jena#CommitInfo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+</rdf:RDF>

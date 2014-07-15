@@ -5,10 +5,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
+import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
 
 public class OntoCommit implements OntoCommitInterface {
+
+    private OntModel model;
 
     private List<Resource> inserts;
     private List<Resource> updates;
@@ -178,5 +181,13 @@ public class OntoCommit implements OntoCommitInterface {
     @Override
     public void setComment(String comment) {
         this.comment = comment;
+    }
+
+    public OntModel getModel() {
+        return model;
+    }
+
+    public void setModel(OntModel model) {
+        this.model = model;
     }
 }
