@@ -1,0 +1,34 @@
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+    xmlns="http://cdlflex.org/ekb#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+  <owl:Class rdf:about="http://cdlflex.org/ekb#TestModel">
+    <hasInfoModel>
+      <InfoModel rdf:about="http://cdlflex.org/ekb#InfoModel_TestModel">
+        <modelTypeVersion>1.0.0</modelTypeVersion>
+        <modelType>org.openengsb.core.ekb.persistence.onto.internal.models.TestModel</modelType>
+      </InfoModel>
+    </hasInfoModel>
+  </owl:Class>
+  <owl:Class rdf:about="http://cdlflex.org/ekb#InfoModel"/>
+  <owl:DatatypeProperty rdf:about="http://cdlflex.org/ekb#modelType">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoModel"/>
+  </owl:DatatypeProperty>
+  <owl:DatatypeProperty rdf:about="http://cdlflex.org/ekb#modelTypeVersion">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoModel"/>
+  </owl:DatatypeProperty>
+  <owl:DatatypeProperty rdf:about="http://cdlflex.org/ekb#id">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#TestModel"/>
+  </owl:DatatypeProperty>
+  <TestModel rdf:about="http://cdlflex.org/ekb#test/A2">
+    <id>A2</id>
+  </TestModel>
+  <owl:AnnotationProperty rdf:about="http://cdlflex.org/ekb#hasInfoModel">
+    <rdfs:range rdf:resource="http://cdlflex.org/ekb#InfoModel"/>
+  </owl:AnnotationProperty>
+</rdf:RDF>

@@ -1,0 +1,172 @@
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:protege="http://protege.stanford.edu/plugins/owl/protege#"
+    xmlns:xsp="http://www.owl-ontologies.com/2005/08/07/xsp.owl#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+    xmlns:swrl="http://www.w3.org/2003/11/swrl#"
+    xmlns="http://cdlflex.org/ekb#"
+    xmlns:swrlb="http://www.w3.org/2003/11/swrlb#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+  <owl:Ontology rdf:about="http://cdlflex.org/ekb"/>
+  <owl:Class rdf:about="http://cdlflex.org/ekb#InfoContext"/>
+  <owl:Class rdf:about="http://cdlflex.org/ekb#InfoCommit"/>
+  <owl:Class rdf:about="http://cdlflex.org/ekb#InfoModel"/>
+  <owl:ObjectProperty rdf:about="http://cdlflex.org/ekb#hasContextCommit">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoContext"/>
+    <rdfs:range rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <owl:inverseOf>
+      <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#hasCommitContext"/>
+    </owl:inverseOf>
+  </owl:ObjectProperty>
+  <owl:ObjectProperty rdf:about="http://cdlflex.org/ekb#hasInfoCommit">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+    <rdfs:range rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+  </owl:ObjectProperty>
+  <owl:ObjectProperty rdf:about="http://cdlflex.org/ekb#hasInfoModel">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+    <rdfs:range rdf:resource="http://cdlflex.org/ekb#InfoModel"/>
+  </owl:ObjectProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#modelType">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoModel"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#nextInfoCommit">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#graphDelete">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#graphInsert">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#commitTime">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#graphBeforeUpdate">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#contextStart">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoContext"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#hasCommitContext">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://cdlflex.org/ekb#InfoContext"/>
+    <owl:inverseOf rdf:resource="http://cdlflex.org/ekb#hasContextCommit"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#commitId">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#instanceId">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#modelTypeVersion">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoModel"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#nextInfoModel">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoModel"/>
+    <rdfs:range rdf:resource="http://cdlflex.org/ekb#InfoModel"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#graphUpdate">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#contextId">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoContext"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#connectorId">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#contextGraph">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoContext"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:about="http://cdlflex.org/ekb#domainId">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="http://cdlflex.org/ekb#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <InfoContext rdf:about="http://cdlflex.org/ekb#InfoContexttest">
+    <contextId>test</contextId>
+    <hasContextCommit>
+      <InfoCommit rdf:about="http://cdlflex.org/ekb#InfoCommit2ae392bc-8b5d-4df3-ba49-d143ae170155">
+        <nextInfoCommit>
+          <InfoCommit rdf:about="http://cdlflex.org/ekb#InfoCommit6957ade1-d01f-4366-ad80-53930e1b31bb">
+            <graphBeforeUpdate>http://cdlflex.org/ekb#_graph_before_update6957ade1-d01f-4366-ad80-53930e1b31bb</graphBeforeUpdate>
+            <nextInfoCommit>
+              <InfoCommit rdf:about="http://cdlflex.org/ekb#InfoCommitff388b93-be94-46bb-821b-402b654e2949">
+                <graphBeforeUpdate>http://cdlflex.org/ekb#_graph_before_updateff388b93-be94-46bb-821b-402b654e2949</graphBeforeUpdate>
+                <nextInfoCommit>
+                  <InfoCommit rdf:about="http://cdlflex.org/ekb#InfoCommitdf5cfc6b-2657-45f9-a364-f43f88fc195b">
+                    <commitTime>1406201268903</commitTime>
+                    <domainId>testdomain</domainId>
+                    <hasCommitContext rdf:resource="http://cdlflex.org/ekb#InfoContexttest"/>
+                    <connectorId>testconnector</connectorId>
+                    <instanceId>testinstance</instanceId>
+                    <graphDelete>http://cdlflex.org/ekb#_graph_deletedf5cfc6b-2657-45f9-a364-f43f88fc195b</graphDelete>
+                    <commitId>df5cfc6b-2657-45f9-a364-f43f88fc195b</commitId>
+                  </InfoCommit>
+                </nextInfoCommit>
+                <graphInsert>http://cdlflex.org/ekb#_graph_insertff388b93-be94-46bb-821b-402b654e2949</graphInsert>
+                <commitTime>1406201268663</commitTime>
+                <domainId>testdomain</domainId>
+                <hasCommitContext rdf:resource="http://cdlflex.org/ekb#InfoContexttest"/>
+                <connectorId>testconnector</connectorId>
+                <instanceId>testinstance</instanceId>
+                <graphUpdate>http://cdlflex.org/ekb#_graph_updateff388b93-be94-46bb-821b-402b654e2949</graphUpdate>
+                <commitId>ff388b93-be94-46bb-821b-402b654e2949</commitId>
+              </InfoCommit>
+            </nextInfoCommit>
+            <commitTime>1406201268075</commitTime>
+            <domainId>testdomain</domainId>
+            <hasCommitContext rdf:resource="http://cdlflex.org/ekb#InfoContexttest"/>
+            <connectorId>testconnector</connectorId>
+            <instanceId>testinstance</instanceId>
+            <graphUpdate>http://cdlflex.org/ekb#_graph_update6957ade1-d01f-4366-ad80-53930e1b31bb</graphUpdate>
+            <commitId>6957ade1-d01f-4366-ad80-53930e1b31bb</commitId>
+          </InfoCommit>
+        </nextInfoCommit>
+        <graphInsert>http://cdlflex.org/ekb#_graph_insert2ae392bc-8b5d-4df3-ba49-d143ae170155</graphInsert>
+        <commitTime>1406201267622</commitTime>
+        <domainId>testdomain</domainId>
+        <hasCommitContext rdf:resource="http://cdlflex.org/ekb#InfoContexttest"/>
+        <connectorId>testconnector</connectorId>
+        <instanceId>testinstance</instanceId>
+        <commitId>2ae392bc-8b5d-4df3-ba49-d143ae170155</commitId>
+      </InfoCommit>
+    </hasContextCommit>
+    <hasContextCommit rdf:resource="http://cdlflex.org/ekb#InfoCommit6957ade1-d01f-4366-ad80-53930e1b31bb"/>
+    <hasContextCommit rdf:resource="http://cdlflex.org/ekb#InfoCommitff388b93-be94-46bb-821b-402b654e2949"/>
+    <hasContextCommit rdf:resource="http://cdlflex.org/ekb#InfoCommitdf5cfc6b-2657-45f9-a364-f43f88fc195b"/>
+    <contextStart>1406201267666</contextStart>
+    <contextGraph>http://cdlflex.org/ekb#InfoContexttest</contextGraph>
+  </InfoContext>
+</rdf:RDF>

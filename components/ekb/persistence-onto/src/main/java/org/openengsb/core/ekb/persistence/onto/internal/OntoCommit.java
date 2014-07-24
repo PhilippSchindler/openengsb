@@ -11,22 +11,49 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 
 public class OntoCommit implements OntoCommitInterface {
 
-    private OntModel model;
+    private OntModel insertModel;
+    private OntModel updateModel;
+    private OntModel deleteModel;
 
     private List<Resource> inserts;
     private List<Resource> updates;
     private List<Resource> deletes;
 
     private Boolean committed = false;
+
     private String committer;
     private Long timestamp;
     private String context;
     private String comment;
-    private String revision;
-    private String parent;
+    private UUID revision;
+    private UUID parent;
     private String domainId;
     private String connectorId;
     private String instanceId;
+
+    public OntModel getInsertModel() {
+        return insertModel;
+    }
+
+    public void setInsertModel(OntModel insertModel) {
+        this.insertModel = insertModel;
+    }
+
+    public OntModel getUpdateModel() {
+        return updateModel;
+    }
+
+    public void setUpdateModel(OntModel updateModel) {
+        this.updateModel = updateModel;
+    }
+
+    public OntModel getDeleteModel() {
+        return deleteModel;
+    }
+
+    public void setDeleteModel(OntModel deleteModel) {
+        this.deleteModel = deleteModel;
+    }
 
     @Override
     public List<Resource> getInserts() {
@@ -72,7 +99,7 @@ public class OntoCommit implements OntoCommitInterface {
 
     @Override
     public void delete(String oid) throws OntoException {
-        Resource obj = ResourceFactory.createResource(OntoConverter.CDL_NAMESPACE + oid);
+        Resource obj = ResourceFactory.createResource(OntoConstants.CDL_NAMESPACE + oid);
         if (deletes == null) {
             deletes = new ArrayList<Resource>();
         }
@@ -113,6 +140,10 @@ public class OntoCommit implements OntoCommitInterface {
         return context;
     }
 
+    public void setContextId(String context) {
+        this.context = context;
+    }
+
     @Override
     public boolean isCommitted() {
         return committed;
@@ -130,17 +161,22 @@ public class OntoCommit implements OntoCommitInterface {
 
     @Override
     public UUID getRevisionNumber() {
-        return revision != null ? UUID.fromString(revision) : null;
+        return revision != null ? revision : null;
     }
 
     @Override
     public UUID getParentRevisionNumber() {
-        return parent != null ? UUID.fromString(parent) : null;
+        return parent != null ? parent : null;
     }
 
     @Override
     public void setHeadRevisionNumber(UUID head) {
-        this.parent = head != null ? head.toString() : null;
+        this.parent = head != null ? head : null;
+    }
+
+    @Override
+    public void setParentRevisionNumber(UUID parent) {
+        this.parent = parent != null ? parent : null;
     }
 
     @Override
@@ -181,13 +217,5 @@ public class OntoCommit implements OntoCommitInterface {
     @Override
     public void setComment(String comment) {
         this.comment = comment;
-    }
-
-    public OntModel getModel() {
-        return model;
-    }
-
-    public void setModel(OntModel model) {
-        this.model = model;
     }
 }

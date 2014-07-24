@@ -3,6 +3,8 @@ package org.openengsb.core.ekb.persistence.onto.internal;
 import java.util.List;
 import java.util.UUID;
 
+import jline.internal.Log;
+
 import org.openengsb.core.api.context.ContextHolder;
 import org.openengsb.core.ekb.api.EKBCommit;
 import org.openengsb.core.ekb.api.EKBConcurrentException;
@@ -62,6 +64,8 @@ public class EKBServiceOnto implements EKBService {
         runEKBPreCommitHooks(commit);
         EKBException exception = null;
         OntoCommit converted = ontoConverter.convertEKBCommit(commit);
+        Log.info("Commit: " + commit);
+        Log.info("Converted: " + converted);
         try {
             performPersisting(converted, commit);
             runEKBPostCommitHooks(commit);
@@ -71,8 +75,19 @@ public class EKBServiceOnto implements EKBService {
         runEKBErrorHooks(commit, exception);
     }
 
-    private void performPersisting(OntoCommit converted, EKBCommit commit) {
-        // TODO Auto-generated method stub
+    /**
+     * Performs the persisting of the models into the EDB.
+     */
+    private void performPersisting(OntoCommit commit, EKBCommit source) {
+        try {
+            Log.info("performPersisting: " + commit);
+            ontoService.commit(commit);
+            Log.info("performPersisting: " + commit);
+            source.setRevisionNumber(commit.getRevisionNumber());
+            source.setParentRevisionNumber(commit.getParentRevisionNumber());
+        } catch (Exception e) {
+            throw new EKBException("Error while commiting EKBCommit", e);
+        }
     }
 
     /**
@@ -165,7 +180,7 @@ public class EKBServiceOnto implements EKBService {
 
     @Override
     public Object nativeQuery(Object query) {
-        return ontoService.executeQuery(query.toString());
+        return ontoService.executeQuery(query.toString(), ContextHolder.get().getCurrentContextId());
     }
 
     @Override

@@ -32,7 +32,9 @@ import org.openengsb.connector.usernamepassword.Password;
 import org.openengsb.core.api.context.ContextHolder;
 import org.openengsb.core.api.security.AuthenticationContext;
 import org.openengsb.core.api.security.service.UserDataManager;
-import org.openengsb.core.ekb.api.QueryInterface;
+import org.openengsb.core.ekb.api.EDBQueryFilter;
+import org.openengsb.core.ekb.api.EKBService;
+import org.openengsb.core.ekb.api.SingleModelQuery;
 import org.openengsb.core.services.SecurityContext;
 import org.openengsb.core.usersync.SyncronizedUserService;
 import org.openengsb.domain.userprojects.model.Attribute;
@@ -46,7 +48,7 @@ public class SyncronizedUserServiceTest extends AbstractPreConfiguredExamTestHel
 
     private SyncronizedUserService impl;
     private UserDataManager userManager;
-    private QueryInterface queryService;
+    private EKBService queryService;
     private AuthenticationContext authenticationContext;
 
     private final String userName = "testUser";
@@ -57,15 +59,14 @@ public class SyncronizedUserServiceTest extends AbstractPreConfiguredExamTestHel
     private final String cred2Type = "retinascan";
     private final String cred2Value = "blue";
 
-
     @Before
     public void setUp() throws Exception {
         ContextHolder.get().setCurrentContextId("test");
 
         userManager = getOsgiService(UserDataManager.class);
         authenticationContext = getOsgiService(AuthenticationContext.class);
-        queryService = getOsgiService(QueryInterface.class);
-        
+        queryService = getOsgiService(EKBService.class);
+
         impl = getOsgiService(SyncronizedUserService.class);
     }
 
@@ -103,7 +104,8 @@ public class SyncronizedUserServiceTest extends AbstractPreConfiguredExamTestHel
                 assertTrue(userManager.getUserList().contains(userName));
                 assertTrue(userManager.getUserAttribute(userName, attrName).get(0).equals(attrValue));
                 assertTrue(userManager.getUserCredentials(userName, credType).equals(credValue));
-                List<User> result = queryService.queryByString(User.class, "username:\"" + user.getUsername() + "\"");
+                List<User> result = queryService.query(new SingleModelQuery(User.class, new EDBQueryFilter(
+                        "username:\"" + user.getUsername() + "\""), null));
 
                 // Assert DB-Result
                 assertEqualUser(user, result.get(0));
@@ -150,7 +152,8 @@ public class SyncronizedUserServiceTest extends AbstractPreConfiguredExamTestHel
                 assertTrue(userManager.getUserAttribute(userName, attrName).get(0).equals(attrValue));
                 assertTrue(userManager.getUserCredentials(userName, credType).equals(credValue));
                 assertTrue(userManager.getUserCredentials(userName, cred2Type).equals(cred2Value));
-                List<User> result = queryService.queryByString(User.class, "username:\"" + user.getUsername() + "\"");
+                List<User> result = queryService.query(new SingleModelQuery(User.class, new EDBQueryFilter(
+                        "username:\"" + user.getUsername() + "\""), null));
 
                 assertEqualUser(user, result.get(0));
 

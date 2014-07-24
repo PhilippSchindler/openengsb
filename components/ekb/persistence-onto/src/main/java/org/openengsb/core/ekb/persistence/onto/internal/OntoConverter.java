@@ -22,6 +22,7 @@ import com.hp.hpl.jena.ontology.Individual;
 import com.hp.hpl.jena.ontology.ObjectProperty;
 import com.hp.hpl.jena.ontology.OntClass;
 import com.hp.hpl.jena.ontology.OntModel;
+import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.vocabulary.XSD;
@@ -30,20 +31,10 @@ public class OntoConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(OntoConverter.class);
 
     public static final String FILEWRAPPER_FILENAME_SUFFIX = ".filename";
-    public static final String CDL_ONTOLOGY = "http://cdl.ifs.tuwien.ac.at/jena";
-    public static final String CDL_NAMESPACE = "http://cdl.ifs.tuwien.ac.at/jena#";
-    public static final String CDL_COMMIT_TIMESTAMP = CDL_NAMESPACE + "commitTime";
-    public static final String CDL_CONNECTOR_ID = CDL_NAMESPACE + "connectorId";
-    public static final String CDL_CONTEXT_ID = CDL_NAMESPACE + "contextId";
-    public static final String CDL_DOMAIN_ID = CDL_NAMESPACE + "domainId";
-    public static final String CDL_INSTANCE_ID = CDL_NAMESPACE + "instanceId";
-    public static final String CDL_COMMIT_INFO = CDL_NAMESPACE + "commitInfo_";
-    public static final String CDL_HAS_COMMIT_INFO = CDL_NAMESPACE + "hasCommitInfo";
 
-    public EKBCommit convertOntoCommit(OntoCommit commit) {
-        EKBCommit ekbCommit = new EKBCommit();
+    public OntoConverter() {
 
-        return ekbCommit;
+        LOGGER.info("OntoConverter Start! ");
     }
 
     /**
@@ -53,38 +44,18 @@ public class OntoConverter {
     public OntoCommit convertEKBCommit(EKBCommit commit) {
         ConnectorInformation information = commit.getConnectorInformation();
         OntoCommit result = new OntoCommit();
-        OntModel model = ModelFactory.createOntologyModel();
-        model.setNsPrefix("", CDL_NAMESPACE);
 
-        Long timeStamp = System.currentTimeMillis();
+        result.setTimestamp(System.currentTimeMillis());
+        result.setConnectorId(information.getConnectorId());
+        result.setDomainId(information.getDomainId());
+        result.setInstanceId(information.getInstanceId());
+        result.setContextId(ContextHolder.get().getCurrentContextId());
 
-        OntClass commitInfoCls = model.createClass(CDL_NAMESPACE + "CommitInfo");
-        Individual commitInfo = model.createIndividual(CDL_COMMIT_INFO + timeStamp, commitInfoCls);
+        result.setInsertModel(convertModelsToJenaResources(commit.getInserts()));
+        result.setUpdateModel(convertModelsToJenaResources(commit.getUpdates()));
+        result.setDeleteModel(convertModelsToJenaResources(commit.getDeletes()));
 
-        AnnotationProperty annoProp = model.createAnnotationProperty(CDL_NAMESPACE + "hasCommitInfo");
-        annoProp.setRange(commitInfoCls);
-        Individual res = model.createIndividual(CDL_ONTOLOGY,
-                model.createOntResource("http://www.w3.org/2002/07/owl#Ontology"));
-        res.addProperty(annoProp, commitInfo);
-
-        DatatypeProperty timestamp = createDatatypeProperty(model, CDL_COMMIT_TIMESTAMP, commitInfoCls, XSD.xstring);
-        DatatypeProperty contextID = createDatatypeProperty(model, CDL_CONTEXT_ID, commitInfoCls, XSD.xstring);
-        DatatypeProperty connectorID = createDatatypeProperty(model, CDL_CONNECTOR_ID, commitInfoCls, XSD.xstring);
-        DatatypeProperty domainID = createDatatypeProperty(model, CDL_DOMAIN_ID, commitInfoCls, XSD.xstring);
-        DatatypeProperty instanceID = createDatatypeProperty(model, CDL_INSTANCE_ID, commitInfoCls, XSD.xstring);
-
-        commitInfo.addProperty(timestamp, timeStamp.toString());
-        commitInfo.addProperty(contextID, ContextHolder.get().getCurrentContextId());
-        commitInfo.addProperty(connectorID, information.getConnectorId());
-        commitInfo.addProperty(domainID, information.getDomainId());
-        commitInfo.addProperty(instanceID, information.getInstanceId());
-
-        result.setInserts(convertModelsToJenaResources(commit.getInserts(), commitInfo, model));
-        result.setUpdates(convertModelsToJenaResources(commit.getUpdates(), commitInfo, model));
-        result.setDeletes(convertModelsToJenaResources(commit.getDeletes(), commitInfo, model));
-        result.setModel(model);
-
-        model.write(System.out);
+        LOGGER.info("OntoConverter: " + result);
 
         return result;
     }
@@ -93,27 +64,36 @@ public class OntoConverter {
      * Convert a list of models to a list of EDBObjects (the version retrieving
      * is not considered here. This is done in the EDB directly).
      */
-    public List<Resource> convertModelsToJenaResources(List<OpenEngSBModel> instances, Resource info, OntModel model) {
-        List<Resource> result = new ArrayList<>();
-        if (instances != null) {
-            for (Object instance : instances) {
-                result.addAll(convertModelToJenaResource(instance, info, model));
+    public OntModel convertModelsToJenaResources(List<OpenEngSBModel> instances) {
+
+        OntModel model = null;
+
+        if (instances != null && !instances.isEmpty()) {
+            model = ModelFactory.createOntologyModel(OntModelSpec.OWL_DL_MEM);
+            model.setNsPrefix("", OntoConstants.CDL_NAMESPACE);
+
+            List<Resource> result = new ArrayList<>();
+            if (instances != null) {
+                for (Object instance : instances) {
+                    result.addAll(convertModelToJenaResource(instance, model));
+                }
             }
+            OwlHelper.save(model, "src/test/resources/test-insert.owl");
         }
-        return result;
+        return model;
     }
 
     /**
      * Converts an OpenEngSBModel object to an EDBObject (the version retrieving
      * is not considered here. This is done in the EDB directly).
      */
-    public List<Resource> convertModelToJenaResource(Object instance, Resource info, OntModel model) {
+    public List<Resource> convertModelToJenaResource(Object instance, OntModel model) {
         if (!OpenEngSBModel.class.isAssignableFrom(instance.getClass())) {
             throw new IllegalArgumentException("This function need to get a model passed");
         }
         List<Resource> objects = new ArrayList<>();
         if (instance != null) {
-            convertSubModel((OpenEngSBModel) instance, objects, info, model);
+            convertSubModel((OpenEngSBModel) instance, objects, model);
         }
         return objects;
     }
@@ -122,14 +102,11 @@ public class OntoConverter {
      * Recursive function to generate a list of EDBObjects out of a model
      * object.
      */
-    private Resource convertSubModel(OpenEngSBModel instance, List<Resource> objects, Resource info, OntModel model) {
+    private Resource convertSubModel(OpenEngSBModel instance, List<Resource> objects, OntModel model) {
         String oid = ModelWrapper.wrap(instance).getCompleteModelOID();
 
-        // System.out.println("DEM: " + oid);
-        // System.out.println("DEM: " + instance.getClass().getSimpleName());
-
-        OntClass modelCls = model.createClass(CDL_NAMESPACE + instance.getClass().getSimpleName());
-        Individual object = model.createIndividual(CDL_NAMESPACE + oid, modelCls);
+        OntClass modelCls = model.createClass(OntoConstants.CDL_NAMESPACE + instance.getClass().getSimpleName());
+        Individual object = model.createIndividual(OntoConstants.CDL_NAMESPACE + oid, modelCls);
 
         for (OpenEngSBModelEntry entry : instance.toOpenEngSBModelEntries()) {
             if (entry.getValue() == null) {
@@ -139,24 +116,25 @@ public class OntoConverter {
                     FileWrapper wrapper = (FileWrapper) entry.getValue();
                     String content = Base64.encodeBase64String(wrapper.getContent());
 
-                    DatatypeProperty datatypeProp = model.createDatatypeProperty(CDL_NAMESPACE + entry.getKey());
+                    DatatypeProperty datatypeProp = model.createDatatypeProperty(OntoConstants.CDL_NAMESPACE
+                            + entry.getKey());
                     datatypeProp.addDomain(modelCls);
                     datatypeProp.addRange(XSD.xstring);
 
                     object.addProperty(datatypeProp, content);
                     object.addProperty(
-                            model.createDatatypeProperty(CDL_NAMESPACE + entry.getKey() + FILEWRAPPER_FILENAME_SUFFIX),
-                            wrapper.getFilename());
+                            model.createDatatypeProperty(OntoConstants.CDL_NAMESPACE + entry.getKey()
+                                    + FILEWRAPPER_FILENAME_SUFFIX), wrapper.getFilename());
                 } catch (IOException e) {
                     LOGGER.error(e.getMessage());
                 }
             } else if (OpenEngSBModel.class.isAssignableFrom(entry.getType())) {
                 OpenEngSBModel temp = (OpenEngSBModel) entry.getValue();
-                Resource objProperty = convertSubModel(temp, objects, info, model);
+                Resource objProperty = convertSubModel(temp, objects, model);
 
-                ObjectProperty objProp = model.createObjectProperty(CDL_NAMESPACE + entry.getKey());
+                ObjectProperty objProp = model.createObjectProperty(OntoConstants.CDL_NAMESPACE + entry.getKey());
                 objProp.addDomain(modelCls);
-                objProp.addRange(model.createClass(CDL_NAMESPACE + temp.getClass().getSimpleName()));
+                objProp.addRange(model.createClass(OntoConstants.CDL_NAMESPACE + temp.getClass().getSimpleName()));
 
                 object.addProperty(objProp, objProperty);
             } else if (List.class.isAssignableFrom(entry.getType())) {
@@ -173,9 +151,10 @@ public class OntoConverter {
                     }
                     if (modelItems) {
                         OpenEngSBModel oesbModel = (OpenEngSBModel) item;
-                        item = convertSubModel(oesbModel, objects, info, model);
-                        property = model.createObjectProperty(CDL_NAMESPACE + entry.getKey());
-                        property.addRange(model.createClass(CDL_NAMESPACE + oesbModel.getClass().getSimpleName()));
+                        item = convertSubModel(oesbModel, objects, model);
+                        property = model.createObjectProperty(OntoConstants.CDL_NAMESPACE + entry.getKey());
+                        property.addRange(model.createClass(OntoConstants.CDL_NAMESPACE
+                                + oesbModel.getClass().getSimpleName()));
                     }
                     property.addDomain(modelCls);
                     object.addProperty(property, (Resource) item);
@@ -192,10 +171,11 @@ public class OntoConverter {
                         modelItems = OpenEngSBModel.class.isAssignableFrom(item.getClass());
                     }
                     if (modelItems) {
-                        item = convertSubModel((OpenEngSBModel) item, objects, info, model);
+                        item = convertSubModel((OpenEngSBModel) item, objects, model);
                     }
 
-                    DatatypeProperty datatypeProp = model.createDatatypeProperty(CDL_NAMESPACE + entry.getKey());
+                    DatatypeProperty datatypeProp = model.createDatatypeProperty(OntoConstants.CDL_NAMESPACE
+                            + entry.getKey());
                     datatypeProp.addDomain(modelCls);
 
                     object.addProperty(datatypeProp, (Resource) item);
@@ -218,22 +198,26 @@ public class OntoConverter {
                     Object key = ent.getKey();
                     Object value = ent.getValue();
                     if (keyIsModel) {
-                        key = convertSubModel((OpenEngSBModel) key, objects, info, model);
+                        key = convertSubModel((OpenEngSBModel) key, objects, model);
                     }
                     if (valueIsModel) {
-                        value = convertSubModel((OpenEngSBModel) value, objects, info, model);
+                        value = convertSubModel((OpenEngSBModel) value, objects, model);
                     }
-                    object.addProperty(model.createProperty(CDL_NAMESPACE + entry.getKey()), (Resource) key);
-                    object.addProperty(model.createProperty(CDL_NAMESPACE + entry.getKey()), (Resource) value);
+                    object.addProperty(model.createProperty(OntoConstants.CDL_NAMESPACE + entry.getKey()),
+                            (Resource) key);
+                    object.addProperty(model.createProperty(OntoConstants.CDL_NAMESPACE + entry.getKey()),
+                            (Resource) value);
                 }
             } else {
                 // TODO: What type should be handled here?
-                DatatypeProperty datatypeProp = model.createDatatypeProperty(CDL_NAMESPACE + entry.getKey());
+                DatatypeProperty datatypeProp = model.createDatatypeProperty(OntoConstants.CDL_NAMESPACE
+                        + entry.getKey());
                 datatypeProp.addDomain(modelCls);
 
                 if (entry.getType().equals(Integer.class)) {
                     datatypeProp.addRange(XSD.xint);
-                    object.addLiteral(model.createProperty(CDL_NAMESPACE + entry.getKey()), entry.getValue());
+                    object.addLiteral(model.createProperty(OntoConstants.CDL_NAMESPACE + entry.getKey()),
+                            entry.getValue());
 
                 } else { // String
                     datatypeProp.addRange(XSD.xstring);
@@ -242,20 +226,21 @@ public class OntoConverter {
             }
         }
 
-        OntClass modelInfoCls = model.createClass(CDL_NAMESPACE + "ModelInfo");
-        Individual modelInfo = model.createIndividual(CDL_NAMESPACE + "ModelInfo_"
+        OntClass modelInfoCls = model.createClass(OntoConstants.CDL_INFO_MODEL);
+        Individual modelInfo = model.createIndividual(OntoConstants.CDL_INFO_MODEL + "_"
                 + instance.getClass().getSimpleName(), modelInfoCls);
 
-        AnnotationProperty annoProp = model.createAnnotationProperty(CDL_NAMESPACE + "hasModelInfo");
+        AnnotationProperty annoProp = model.createAnnotationProperty(OntoConstants.CDL_HAS_INFO_MODEL);
         annoProp.setRange(modelInfoCls);
         modelCls.addProperty(annoProp, modelInfo);
 
-        DatatypeProperty modelTypeProp = model.createDatatypeProperty(CDL_NAMESPACE + OntoConstants.MODEL_TYPE);
+        DatatypeProperty modelTypeProp = model.createDatatypeProperty(OntoConstants.CDL_NAMESPACE
+                + OntoConstants.MODEL_TYPE);
         modelTypeProp.addDomain(modelInfoCls);
         modelTypeProp.addRange(XSD.xstring);
         modelInfo.addProperty(modelTypeProp, instance.retrieveModelName());
 
-        DatatypeProperty modelVersionProp = model.createDatatypeProperty(CDL_NAMESPACE
+        DatatypeProperty modelVersionProp = model.createDatatypeProperty(OntoConstants.CDL_NAMESPACE
                 + OntoConstants.MODEL_TYPE_VERSION);
         modelVersionProp.addDomain(modelInfoCls);
         modelVersionProp.addRange(XSD.xstring);
@@ -264,14 +249,5 @@ public class OntoConverter {
         objects.add(object);
 
         return object;
-    }
-
-    private DatatypeProperty createDatatypeProperty(OntModel model, String URI, Resource domain, Resource range) {
-
-        DatatypeProperty modelTypeProp = model.createDatatypeProperty(URI);
-        modelTypeProp.addDomain(domain);
-        modelTypeProp.addRange(range);
-
-        return modelTypeProp;
     }
 }

@@ -159,4 +159,6 @@ public interface OntoCommitInterface {
      * Sets the comment for this commit.
      */
     void setComment(String comment);
+
+    void setParentRevisionNumber(UUID parent);
 }

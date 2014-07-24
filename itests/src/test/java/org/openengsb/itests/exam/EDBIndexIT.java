@@ -40,7 +40,7 @@ import org.openengsb.core.api.context.ContextHolder;
 import org.openengsb.core.edbi.api.Index;
 import org.openengsb.core.edbi.api.IndexEngine;
 import org.openengsb.core.ekb.api.EKBCommit;
-import org.openengsb.core.ekb.api.PersistInterface;
+import org.openengsb.core.ekb.api.EKBService;
 import org.openengsb.domain.example.model.EOModel;
 import org.openengsb.itests.util.AbstractModelUsingExamTestHelper;
 import org.ops4j.pax.exam.Option;
@@ -56,26 +56,27 @@ public class EDBIndexIT extends AbstractModelUsingExamTestHelper {
 
     public static final String CONTEXT = "testcontext";
 
-    private PersistInterface ekb;
+    private EKBService ekb;
     private IndexEngine indexEngine;
 
     private DataSource dataSource;
 
     @Configuration
     public static Option[] myConfiguration() throws Exception {
-        Option[] options = new Option[]{
-            configFilePut("etc/org.openengsb.ekb.cfg", "modelUpdatePropagationMode", "DEACTIVATED"),
-            configFilePut("etc/org.openengsb.ekb.cfg", "persistInterfaceLockingMode", "DEACTIVATED"),
-            mavenBundle().groupId("org.ops4j.pax.tinybundles").artifactId("tinybundles").versionAsInProject(),
-            feature("openengsb-domain-example"),
-            feature("openengsb-edbi") // also loads spring-jdbc
+        Option[] options = new Option[] {
+                configFilePut("etc/org.openengsb.ekb.cfg", "modelUpdatePropagationMode", "DEACTIVATED"),
+                configFilePut("etc/org.openengsb.ekb.cfg", "persistInterfaceLockingMode", "DEACTIVATED"),
+                mavenBundle().groupId("org.ops4j.pax.tinybundles").artifactId("tinybundles").versionAsInProject(),
+                feature("openengsb-domain-example"), feature("openengsb-edbi") // also
+                                                                               // loads
+                                                                               // spring-jdbc
         };
         return combine(baseConfiguration(), options);
     }
 
     @Before
     public void setup() throws Exception {
-        ekb = getOsgiService(PersistInterface.class);
+        ekb = getOsgiService(EKBService.class);
         indexEngine = getOsgiService(IndexEngine.class);
         dataSource = getOsgiService(DataSource.class);
         registerModelProvider();
@@ -117,8 +118,8 @@ public class EDBIndexIT extends AbstractModelUsingExamTestHelper {
 
         String sql = "SELECT * FROM INFORMATION_SCHEMA.INDEXES WHERE TABLE_NAME = ?";
 
-        Map<String, Object> record =
-            new JdbcTemplate(dataSource).queryForMap(sql, indexEngine.getIndex(EOModel.class).getHeadTableName());
+        Map<String, Object> record = new JdbcTemplate(dataSource).queryForMap(sql, indexEngine.getIndex(EOModel.class)
+                .getHeadTableName());
 
         assertEquals("EDBID", record.get("COLUMN_NAME"));
         assertTrue("Column EDBID is not a primary key", record.get("INDEX_NAME").toString().startsWith("PRIMARY_KEY"));
@@ -141,8 +142,7 @@ public class EDBIndexIT extends AbstractModelUsingExamTestHelper {
         model2.setShared("B");
         model3.setShared("C");
 
-        EKBCommit insertCommit =
-            getTestEKBCommit().addInsert(model1).addInsert(model2).addInsert(model3);
+        EKBCommit insertCommit = getTestEKBCommit().addInsert(model1).addInsert(model2).addInsert(model3);
         ekb.commit(insertCommit);
 
         model2.setShared("B_EDITED");
@@ -154,7 +154,7 @@ public class EDBIndexIT extends AbstractModelUsingExamTestHelper {
         Index<?> index = indexEngine.getIndex(model1.getClass());
 
         assertEquals(5,
-            new JdbcTemplate(dataSource).queryForLong("SELECT COUNT(*) FROM " + index.getHistoryTableName()));
+                new JdbcTemplate(dataSource).queryForLong("SELECT COUNT(*) FROM " + index.getHistoryTableName()));
 
         String sql = "SELECT * FROM " + index.getHistoryTableName() + " ORDER BY REV_OPERATION, EDBID";
         List<Map<String, Object>> records = new JdbcTemplate(dataSource).queryForList(sql);

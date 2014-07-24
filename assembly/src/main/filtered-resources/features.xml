@@ -168,6 +168,7 @@
     <bundle start-level='40'>mvn:org.openengsb.framework.ekb/org.openengsb.framework.ekb.persistence.query.edb/${project.version}</bundle>
     <bundle start-level='40'>mvn:org.openengsb.framework.ekb/org.openengsb.framework.ekb.transformation.wonderland/${project.version}</bundle>
     <bundle start-level='40'>mvn:org.openengsb.framework.ekb/org.openengsb.framework.ekb.persistence.persist.edb/${project.version}</bundle>
+    <bundle start-level='40'>mvn:org.openengsb.framework.ekb/org.openengsb.framework.ekb.persistence.onto/${project.version}</bundle>
     <bundle start-level='40'>mvn:org.openengsb.framework/org.openengsb.framework.util/${project.version}</bundle>
     <bundle start-level='40'>mvn:org.openengsb.framework/org.openengsb.framework.common/${project.version}</bundle>
     <!-- The service bundle requires LDAP -->
