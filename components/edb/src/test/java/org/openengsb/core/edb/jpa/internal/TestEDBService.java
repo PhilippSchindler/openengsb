@@ -23,7 +23,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
 
 import org.openengsb.core.api.security.AuthenticationContext;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.hooks.EDBBeginCommitHook;
 import org.openengsb.core.edb.api.hooks.EDBErrorHook;
 import org.openengsb.core.edb.api.hooks.EDBPostCommitHook;
@@ -49,7 +49,7 @@ public class TestEDBService extends EDBService {
     /**
      * Starts the EDBService for testing purpose
      */
-    public void open() throws EDBException {
+    public void open() throws JenaException {
         getLogger().debug("starting to open EDB for testing via JPA");
         utx = entityManager.getTransaction();
         getLogger().debug("starting of EDB successful");

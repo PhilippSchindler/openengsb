@@ -27,12 +27,12 @@ import com.google.common.base.Objects;
 public class EKBServiceOnto implements EKBService {
     private static final Logger LOGGER = LoggerFactory.getLogger(EKBServiceOnto.class);
     private final OntoService ontoService;
-    private final OntoConverter ontoConverter;
+    private final JenaConverter ontoConverter;
     private final List<EKBPreCommitHook> preCommitHooks;
     private final List<EKBPostCommitHook> postCommitHooks;
     private final List<EKBErrorHook> errorHooks;
 
-    public EKBServiceOnto(OntoService ontoService, OntoConverter ontoConverter, List<EKBPreCommitHook> preCommitHooks,
+    public EKBServiceOnto(OntoService ontoService, JenaConverter ontoConverter, List<EKBPreCommitHook> preCommitHooks,
             List<EKBPostCommitHook> postCommitHooks, List<EKBErrorHook> errorHooks) {
         this.ontoService = ontoService;
         this.ontoConverter = ontoConverter;

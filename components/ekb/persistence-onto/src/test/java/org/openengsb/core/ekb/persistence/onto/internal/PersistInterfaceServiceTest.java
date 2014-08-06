@@ -38,13 +38,13 @@ import com.hp.hpl.jena.tdb.TDBFactory;
 
 public class PersistInterfaceServiceTest {
     private EKBService service;
-    private OntoConverter ontoConverter;
+    private JenaConverter ontoConverter;
 
     @Before
     public void setUp() {
         Dataset dataset = TDBFactory.createDataset("src/test/resources/tdb");
         Model model = RDFDataMgr.loadModel(OntoConstants.CDL_TEMPLATE);
-        ontoConverter = new OntoConverter();
+        ontoConverter = new JenaConverter();
 
         OntoService ontoService = new OntoServiceImpl(dataset, model, true);
         List<EKBPreCommitHook> preHooks = new ArrayList<EKBPreCommitHook>();

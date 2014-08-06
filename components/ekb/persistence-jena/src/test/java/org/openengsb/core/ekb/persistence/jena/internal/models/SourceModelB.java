@@ -15,27 +15,31 @@
  * limitations under the License.
  */
 
-package org.openengsb.core.edb.api;
+package org.openengsb.core.ekb.persistence.jena.internal.models;
 
-@SuppressWarnings("serial")
-/**
- * This exception is thrown if an error occeured while processing commands at
- * the edb service. Mainly their reason are IOExceptions and JPAExceptions.
- */
-public class EDBException extends RuntimeException {
-    public EDBException() {
-        super();
+import org.openengsb.core.api.model.annotation.Model;
+import org.openengsb.core.api.model.annotation.OpenEngSBModelId;
+
+@Model
+public class SourceModelB {
+    
+    @OpenEngSBModelId
+    private String id;
+    private String nameB;
+    
+    public String getId() {
+        return this.id;
+    }
+    
+    public void setId(String id) {
+        this.id = id;
     }
 
-    public EDBException(String s) {
-        super(s);
+    public String getNameB() {
+        return this.nameB;
     }
 
-    public EDBException(Throwable t) {
-        super(t);
-    }
-
-    public EDBException(String s, Throwable t) {
-        super(s, t);
+    public void setNameB(String nameB) {
+        this.nameB = nameB;
     }
 }

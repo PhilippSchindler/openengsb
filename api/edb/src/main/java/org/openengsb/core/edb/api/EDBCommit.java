@@ -31,17 +31,17 @@ public interface EDBCommit {
     /**
      * Add an object to be inserted. The object's timestamp must match the commit's timestamp.
      */
-    void insert(EDBObject obj) throws EDBException;
+    void insert(EDBObject obj) throws JenaException;
     
     /**
      * Add an object to be updated. The object's timestamp must match the commit's timestamp.
      */
-    void update(EDBObject obj) throws EDBException;
+    void update(EDBObject obj) throws JenaException;
 
     /**
      * Delete an object that already exists.
      */
-    void delete(String oid) throws EDBException;
+    void delete(String oid) throws JenaException;
 
     /**
      * For a created commit: retrieve the list of all objects that have been inserted to this commit.

@@ -18,7 +18,7 @@
 package org.openengsb.core.edb.api.hooks;
 
 import org.openengsb.core.edb.api.EDBCommit;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 
 /**
  * Defines the functions of the pre-commit hook for the EDB component. All services in the OSGi environment providing
@@ -34,5 +34,5 @@ public interface EDBPreCommitHook {
      * EDBException, it is forwarded to the error hooks as cause for the error. Every other exception gets caught,
      * logged and ignored.
      */
-    void onPreCommit(EDBCommit commit) throws EDBException;
+    void onPreCommit(EDBCommit commit) throws JenaException;
 }

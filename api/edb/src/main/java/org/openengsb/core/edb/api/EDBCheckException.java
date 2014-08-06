@@ -24,7 +24,7 @@ import java.util.List;
 * failing elements in the commit. The failing elements are listed in this exception.
 */
 @SuppressWarnings("serial")
-public class EDBCheckException extends EDBException {
+public class EDBCheckException extends JenaException {
     private List<EDBObject> failedInserts;
     private List<EDBObject> failedUpdates;
     private List<String> failedDeletes;

@@ -33,132 +33,132 @@ public interface EngineeringDatabaseService {
     /**
      * Commit the provided commit object and returns the corresponding time stamp for the commit.
      */
-    Long commit(EDBCommit obj) throws EDBException;
+    Long commit(EDBCommit obj) throws JenaException;
 
     /**
      * Retrieve the current state of the object with the specified OID.
      */
-    EDBObject getObject(String oid) throws EDBException;
+    EDBObject getObject(String oid) throws JenaException;
 
     /**
      * Retrieve the current state of the object with the specified OID for the given timestamp.
      */
-    EDBObject getObject(String oid, Long timestamp) throws EDBException;
+    EDBObject getObject(String oid, Long timestamp) throws JenaException;
 
     /**
      * Retrieve the current state of the objects with the specified OIDs.
      */
-    List<EDBObject> getObjects(List<String> oids) throws EDBException;
+    List<EDBObject> getObjects(List<String> oids) throws JenaException;
 
     /**
      * Retrieve the current state - a list of all EDBObjects currently available.
      */
-    List<EDBObject> getHead() throws EDBException;
+    List<EDBObject> getHead() throws JenaException;
 
     /**
      * Retrieve the history of an object with a specified OID.
      */
-    List<EDBObject> getHistory(String oid) throws EDBException;
+    List<EDBObject> getHistory(String oid) throws JenaException;
 
     /**
      * Retrieve the history of an object with a specified OID between a specified range of timestamps (inclusive).
      */
-    List<EDBObject> getHistoryForTimeRange(String oid, Long from, Long to) throws EDBException;
+    List<EDBObject> getHistoryForTimeRange(String oid, Long from, Long to) throws JenaException;
 
     /**
      * Get the Log for an object between two timestamps (inclusive).
      */
-    List<EDBLogEntry> getLog(String oid, Long from, Long to) throws EDBException;
+    List<EDBLogEntry> getLog(String oid, Long from, Long to) throws JenaException;
 
     /**
      * Retrieve the full state for a provided timestamp. Note, there need not exist a commit for this exact timestamp.
      * It will be equivalent retrieving the head from the latest commit before or at the exact time provided.
      */
-    List<EDBObject> getHead(long timestamp) throws EDBException;
+    List<EDBObject> getHead(long timestamp) throws JenaException;
 
     /**
      * Queries for EDBObject based on the given query request object
      */
-    List<EDBObject> query(QueryRequest request) throws EDBException;
+    List<EDBObject> query(QueryRequest request) throws JenaException;
 
     /**
      * Convenience function to query for a commit with a single matching key-value pair.
      */
-    List<EDBCommit> getCommitsByKeyValue(String key, Object value) throws EDBException;
+    List<EDBCommit> getCommitsByKeyValue(String key, Object value) throws JenaException;
 
     /**
      * More general query for a commit, with AND-connected key-value pairs to match.
      */
-    List<EDBCommit> getCommits(Map<String, Object> query) throws EDBException;
+    List<EDBCommit> getCommits(Map<String, Object> query) throws JenaException;
 
     /**
      * Returns a list of commit meta information of all commits which are matching the given request.
      */
-    List<CommitMetaInfo> getRevisionsOfMatchingCommits(CommitQueryRequest request) throws EDBException;
+    List<CommitMetaInfo> getRevisionsOfMatchingCommits(CommitQueryRequest request) throws JenaException;
 
     /**
      * Convenience function to get a commit for a timestamp. In this case, if the timestamp doesn't exist, null is
      * returned. Exceptions are only thrown for database errors.
      */
-    EDBCommit getCommit(Long from) throws EDBException;
+    EDBCommit getCommit(Long from) throws JenaException;
 
     /**
      * Convenience function to get a commit for a given revision string. If there is no commit for the given revision
      * string or if a database error occurs, an EDBException is thrown.
      */
-    EDBCommit getCommitByRevision(String revision) throws EDBException;
+    EDBCommit getCommitByRevision(String revision) throws JenaException;
 
     /**
      * Convenience function to query for a commit with a single matching key-value pair.
      */
-    EDBCommit getLastCommitByKeyValue(String key, Object value) throws EDBException;
+    EDBCommit getLastCommitByKeyValue(String key, Object value) throws JenaException;
 
     /**
      * More general query for the last commit, with AND-connected key-value pairs to match.
      */
-    EDBCommit getLastCommit(Map<String, Object> query) throws EDBException;
+    EDBCommit getLastCommit(Map<String, Object> query) throws JenaException;
 
     /**
      * Compare two states and show the differences.
      */
-    EDBDiff getDiff(Long firstTimestamp, Long secondTimestamp) throws EDBException;
+    EDBDiff getDiff(Long firstTimestamp, Long secondTimestamp) throws JenaException;
 
     /**
      * Find all OIDs which have been "resurrected" (deleted and recreated)
      */
-    List<String> getResurrectedOIDs() throws EDBException;
+    List<String> getResurrectedOIDs() throws JenaException;
 
     /**
      * Fixed-Complex-Query - Get all objects at the state of last commit which matches the provided query.
      */
-    List<EDBObject> getStateOfLastCommitMatching(Map<String, Object> query) throws EDBException;
+    List<EDBObject> getStateOfLastCommitMatching(Map<String, Object> query) throws JenaException;
 
     /**
      * Convenience function, see getStateofLastCommitMatching(Map<String, Object> query)
      */
-    List<EDBObject> getStateOfLastCommitMatchingByKeyValue(String key, Object value) throws EDBException;
+    List<EDBObject> getStateOfLastCommitMatchingByKeyValue(String key, Object value) throws JenaException;
 
     /**
      * Creates an EDBCommit object out of the given EDBObject lists
      */
     EDBCommit createEDBCommit(List<EDBObject> inserts, List<EDBObject> updates, List<EDBObject> deletes)
-        throws EDBException;
+        throws JenaException;
 
     /**
      * Returns the revision of the current state of the EDB.
      */
-    UUID getCurrentRevisionNumber() throws EDBException;
+    UUID getCurrentRevisionNumber() throws JenaException;
 
     /**
      * Returns the revision of the last commit performed in the EDB under the given contextId.
      */
-    UUID getLastRevisionNumberOfContext(String contextId) throws EDBException;
+    UUID getLastRevisionNumberOfContext(String contextId) throws JenaException;
 
     /**
      * Deletes the commit corresponding to the given revision.
      * 
      * @param revision of the commit to delete
-     * @throws EDBException
+     * @throws JenaException
      */
-    void deleteCommit(UUID revision) throws EDBException;
+    void deleteCommit(UUID revision) throws JenaException;
 }

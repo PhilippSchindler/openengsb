@@ -34,7 +34,7 @@ import org.junit.Test;
 import org.openengsb.core.api.model.QueryRequest;
 import org.openengsb.core.edb.api.EDBCommit;
 import org.openengsb.core.edb.api.EDBConstants;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBLogEntry;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EDBObjectEntry;
@@ -84,7 +84,7 @@ public class EDBFunctionTest extends AbstractEDBTest {
         checkTimeStamps(Arrays.asList(time));
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testGetInexistantObject_shouldThrowException() throws Exception {
         db.getObject("/this/object/does/not/exist");
     }
@@ -289,7 +289,7 @@ public class EDBFunctionTest extends AbstractEDBTest {
         checkTimeStamps(Arrays.asList(time1, time2, time3));
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testCommitTwiceSameCommit_shouldThrowError() throws Exception {
         Map<String, EDBObjectEntry> data1 = new HashMap<String, EDBObjectEntry>();
         putValue("KeyA", "Value A 1", data1);
@@ -314,7 +314,7 @@ public class EDBFunctionTest extends AbstractEDBTest {
         assertThat(object.getObject(EDBConstants.MODEL_VERSION, Integer.class), is(1));
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testCommitEDBObjectsInsertDouble_shouldThrowException() throws Exception {
         EDBObject object = new EDBObject("/commit/test/insert/2");
         List<EDBObject> inserts = new ArrayList<EDBObject>();
@@ -324,7 +324,7 @@ public class EDBFunctionTest extends AbstractEDBTest {
         commitObjects(inserts, null, null);
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testIfConflictDetectionIsWorking_shouldThrowException() throws Exception {
         EDBObject object = new EDBObject("/commit/test/insert/3");
         object.putEDBObjectEntry("bla", "blub");
@@ -362,7 +362,7 @@ public class EDBFunctionTest extends AbstractEDBTest {
         assertThat(second.getString("testkey"), is("testvalue1"));
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testCommitEDBObjectsUpdateVerstionConflict_shouldThrowException() throws Exception {
         EDBObject object = new EDBObject("/commit/test/update/2");
         List<EDBObject> objects = new ArrayList<EDBObject>();
@@ -373,7 +373,7 @@ public class EDBFunctionTest extends AbstractEDBTest {
         commitObjects(null, objects, null);
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testCommitEDBObjectsUpdateVerstionConflict2_shouldThrowException() throws Exception {
         EDBObject object = new EDBObject("/commit/test/update/3");
         commitObjects(Arrays.asList(object), null, null);
@@ -397,7 +397,7 @@ public class EDBFunctionTest extends AbstractEDBTest {
         assertThat(entry.isDeleted(), is(true));
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testCommitEDBObjectsDeleteNonExisting_shouldThrowException() throws Exception {
         EDBObject object = new EDBObject("/commit/test/delete/2");
         List<EDBObject> objects = new ArrayList<EDBObject>();
@@ -405,7 +405,7 @@ public class EDBFunctionTest extends AbstractEDBTest {
         commitObjects(null, null, objects);
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testCommitEDBObjectsDeleteAlreadyDeleted_shouldThrowException() throws Exception {
         EDBObject object = new EDBObject("/commit/test/delete/3");
         List<EDBObject> objects = new ArrayList<EDBObject>();
@@ -455,7 +455,7 @@ public class EDBFunctionTest extends AbstractEDBTest {
         assertThat(ci.getRevisionNumber(), notNullValue());
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testIfWrongParentCausesCommitError_shouldThrowException() throws Exception {
         db.commit(getEDBCommit()); // add one entry so that there is actually a head
         EDBCommit ci = getEDBCommit();
@@ -497,12 +497,12 @@ public class EDBFunctionTest extends AbstractEDBTest {
         assertThat(result.size(), is(0));
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testDeleteWithNullRevision_shouldThrowException() {
         db.deleteCommit(null);
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testDeleteCommitWithWrongRevision_shouldThrowException() {
         db.deleteCommit(UUID.randomUUID());
     }

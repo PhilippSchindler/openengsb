@@ -29,7 +29,7 @@ import org.openengsb.core.api.model.CommitQueryRequest;
 import org.openengsb.core.api.model.QueryRequest;
 import org.openengsb.core.api.security.AuthenticationContext;
 import org.openengsb.core.edb.api.EDBCommit;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBLogEntry;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.hooks.EDBBeginCommitHook;
@@ -56,39 +56,39 @@ public class EDBService extends AbstractEDBService {
     }
 
     @Override
-    public Long commit(EDBCommit commit) throws EDBException {
+    public Long commit(EDBCommit commit) throws JenaException {
         return performCommitLogic(commit);
     }
 
     @Override
-    public EDBObject getObject(String oid) throws EDBException {
+    public EDBObject getObject(String oid) throws JenaException {
         getLogger().debug("loading newest JPAObject with the oid {}", oid);
         JPAObject temp = dao.getJPAObject(oid);
         return EDBUtils.convertJPAObjectToEDBObject(temp);
     }
 
     @Override
-    public EDBObject getObject(String oid, Long timestamp) throws EDBException {
+    public EDBObject getObject(String oid, Long timestamp) throws JenaException {
         getLogger().debug("loading JPAObject with the oid {} for timestamp {}", oid, timestamp);
         JPAObject temp = dao.getJPAObject(oid, timestamp);
         return EDBUtils.convertJPAObjectToEDBObject(temp);
     }
 
     @Override
-    public List<EDBObject> getObjects(List<String> oids) throws EDBException {
+    public List<EDBObject> getObjects(List<String> oids) throws JenaException {
         List<JPAObject> objects = dao.getJPAObjects(oids);
         return EDBUtils.convertJPAObjectsToEDBObjects(objects);
     }
 
     @Override
-    public List<EDBObject> getHistory(String oid) throws EDBException {
+    public List<EDBObject> getHistory(String oid) throws JenaException {
         getLogger().debug("loading history of JPAObject with the oid {}", oid);
         List<JPAObject> objects = dao.getJPAObjectHistory(oid);
         return EDBUtils.convertJPAObjectsToEDBObjects(objects);
     }
 
     @Override
-    public List<EDBObject> getHistoryForTimeRange(String oid, Long from, Long to) throws EDBException {
+    public List<EDBObject> getHistoryForTimeRange(String oid, Long from, Long to) throws JenaException {
         getLogger().debug("loading JPAObject with the oid {} from "
                 + "the timestamp {} to the timestamp {}", new Object[]{ oid, from, to });
         List<JPAObject> objects = dao.getJPAObjectHistory(oid, from, to);
@@ -96,13 +96,13 @@ public class EDBService extends AbstractEDBService {
     }
 
     @Override
-    public List<EDBLogEntry> getLog(String oid, Long from, Long to) throws EDBException {
+    public List<EDBLogEntry> getLog(String oid, Long from, Long to) throws JenaException {
         getLogger().debug("loading the log of JPAObject with the oid {} from "
                 + "the timestamp {} to the timestamp {}", new Object[]{ oid, from, to });
         List<EDBObject> history = getHistoryForTimeRange(oid, from, to);
         List<JPACommit> commits = dao.getJPACommit(oid, from, to);
         if (history.size() != commits.size()) {
-            throw new EDBException("inconsistent log " + Integer.toString(commits.size()) + " commits for "
+            throw new JenaException("inconsistent log " + Integer.toString(commits.size()) + " commits for "
                     + Integer.toString(history.size()) + " history entries");
         }
         List<EDBLogEntry> log = new ArrayList<EDBLogEntry>();
@@ -113,100 +113,100 @@ public class EDBService extends AbstractEDBService {
     }
 
     @Override
-    public List<EDBObject> getHead() throws EDBException {
+    public List<EDBObject> getHead() throws JenaException {
         return dao.getJPAHead(System.currentTimeMillis()).getEDBObjects();
     }
 
     @Override
-    public List<EDBObject> getHead(long timestamp) throws EDBException {
+    public List<EDBObject> getHead(long timestamp) throws JenaException {
         getLogger().debug("load the elements of the JPAHead with the timestamp {}", timestamp);
         JPAHead head = dao.getJPAHead(timestamp);
         if (head != null) {
             return head.getEDBObjects();
         }
-        throw new EDBException("Failed to get head for timestamp " + Long.toString(timestamp));
+        throw new JenaException("Failed to get head for timestamp " + Long.toString(timestamp));
     }
 
     @Override
-    public List<EDBObject> query(QueryRequest request) throws EDBException {
+    public List<EDBObject> query(QueryRequest request) throws JenaException {
         getLogger().debug("Query for objects based on the request: {}", request);
         try {
             return EDBUtils.convertJPAObjectsToEDBObjects(dao.query(request));
         } catch (Exception ex) {
-            throw new EDBException("Failed to query for objects with the given map", ex);
+            throw new JenaException("Failed to query for objects with the given map", ex);
         }
     }
 
     @Override
-    public List<EDBCommit> getCommitsByKeyValue(String key, Object value) throws EDBException {
+    public List<EDBCommit> getCommitsByKeyValue(String key, Object value) throws JenaException {
         Map<String, Object> queryMap = new HashMap<String, Object>();
         queryMap.put(key, value);
         return getCommits(queryMap);
     }
 
     @Override
-    public List<EDBCommit> getCommits(Map<String, Object> queryMap) throws EDBException {
+    public List<EDBCommit> getCommits(Map<String, Object> queryMap) throws JenaException {
         List<JPACommit> commits = dao.getCommits(queryMap);
         return new ArrayList<EDBCommit>(commits);
     }
 
     @Override
-    public JPACommit getLastCommitByKeyValue(String key, Object value) throws EDBException {
+    public JPACommit getLastCommitByKeyValue(String key, Object value) throws JenaException {
         Map<String, Object> queryMap = new HashMap<String, Object>();
         queryMap.put(key, value);
         return getLastCommit(queryMap);
     }
 
     @Override
-    public JPACommit getLastCommit(Map<String, Object> queryMap) throws EDBException {
+    public JPACommit getLastCommit(Map<String, Object> queryMap) throws JenaException {
         JPACommit result = dao.getLastCommit(queryMap);
         return result;
     }
 
     @Override
-    public List<CommitMetaInfo> getRevisionsOfMatchingCommits(CommitQueryRequest request) throws EDBException {
+    public List<CommitMetaInfo> getRevisionsOfMatchingCommits(CommitQueryRequest request) throws JenaException {
         getLogger().debug("Request revisions of matching commits for the request {}", request);
         return dao.getRevisionsOfMatchingCommits(request);
     }
 
     @Override
-    public UUID getCurrentRevisionNumber() throws EDBException {
+    public UUID getCurrentRevisionNumber() throws JenaException {
         try {
             return getCommit(System.currentTimeMillis()).getRevisionNumber();
-        } catch (EDBException e) {
+        } catch (JenaException e) {
             getLogger().debug("There was no commit so far, so the current revision number is null");
             return null;
         }
     }
 
     @Override
-    public UUID getLastRevisionNumberOfContext(String contextId) throws EDBException {
+    public UUID getLastRevisionNumberOfContext(String contextId) throws JenaException {
         try {
             return getLastCommitByKeyValue("context", contextId).getRevisionNumber();
-        } catch (EDBException e) {
+        } catch (JenaException e) {
             getLogger().debug("There was no commit so far under this context, so null is returned");
         }
         return null;
     }
 
     @Override
-    public JPACommit getCommit(Long from) throws EDBException {
+    public JPACommit getCommit(Long from) throws JenaException {
         List<JPACommit> commits = dao.getJPACommit(from);
         if (commits == null || commits.size() == 0) {
-            throw new EDBException("There is no commit for this timestamp");
+            throw new JenaException("There is no commit for this timestamp");
         } else if (commits.size() > 1) {
-            throw new EDBException("There are more than one commit for one timestamp");
+            throw new JenaException("There are more than one commit for one timestamp");
         }
         return commits.get(0);
     }
 
     @Override
-    public EDBCommit getCommitByRevision(String revision) throws EDBException {
+    public EDBCommit getCommitByRevision(String revision) throws JenaException {
         return dao.getJPACommit(revision);
     }
 
     @Override
-    public Diff getDiff(Long firstTimestamp, Long secondTimestamp) throws EDBException {
+    public Diff getDiff(Long firstTimestamp, Long secondTimestamp) throws JenaException {
         List<EDBObject> headA = getHead(firstTimestamp);
         List<EDBObject> headB = getHead(secondTimestamp);
 
@@ -214,19 +214,19 @@ public class EDBService extends AbstractEDBService {
     }
 
     @Override
-    public List<String> getResurrectedOIDs() throws EDBException {
+    public List<String> getResurrectedOIDs() throws JenaException {
         return dao.getResurrectedOIDs();
     }
 
     @Override
     public List<EDBObject> getStateOfLastCommitMatching(
-            Map<String, Object> queryMap) throws EDBException {
+            Map<String, Object> queryMap) throws JenaException {
         JPACommit ci = getLastCommit(queryMap);
         return getHead(ci.getTimestamp());
     }
 
     @Override
-    public List<EDBObject> getStateOfLastCommitMatchingByKeyValue(String key, Object value) throws EDBException {
+    public List<EDBObject> getStateOfLastCommitMatchingByKeyValue(String key, Object value) throws JenaException {
         Map<String, Object> query = new HashMap<String, Object>();
         query.put(key, value);
         return getStateOfLastCommitMatching(query);
@@ -234,7 +234,7 @@ public class EDBService extends AbstractEDBService {
 
     @Override
     public EDBCommit createEDBCommit(List<EDBObject> inserts, List<EDBObject> updates, List<EDBObject> deletes)
-        throws EDBException {
+        throws JenaException {
         String committer = getAuthenticatedUser();
         String contextId = getActualContextId();
         JPACommit commit = new JPACommit(committer, contextId);
@@ -261,9 +261,9 @@ public class EDBService extends AbstractEDBService {
     }
 
     @Override
-    public void deleteCommit(UUID revision) throws EDBException {
+    public void deleteCommit(UUID revision) throws JenaException {
         if (revision == null) {
-            throw new EDBException("null revision not allowed");
+            throw new JenaException("null revision not allowed");
         }
         JPACommit commit = dao.getJPACommit(revision.toString());
         QueryRequest request =

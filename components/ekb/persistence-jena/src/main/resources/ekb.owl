@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:protege="http://protege.stanford.edu/plugins/owl/protege#"
+    xmlns:xsp="http://www.owl-ontologies.com/2005/08/07/xsp.owl#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:prov="http://www.w3.org/ns/prov#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+    xmlns:swrl="http://www.w3.org/2003/11/swrl#"
+    xmlns="http://cdlflex.org/ekb#"
+    xmlns:swrlb="http://www.w3.org/2003/11/swrlb#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+  xml:base="http://cdlflex.org/ekb">
+  <owl:Ontology rdf:about=""/>
+  <owl:Class rdf:ID="InfoContext"/>
+  <owl:Class rdf:ID="InfoCommit"/>
+  <owl:Class rdf:about="http://www.w3.org/ns/prov#Entity"/>
+  <owl:Class rdf:ID="InfoModel"/>
+  <owl:ObjectProperty rdf:about="http://www.w3.org/ns/prov#wasRevisionOf">
+    <rdfs:domain rdf:resource="http://www.w3.org/ns/prov#Entity"/>
+    <rdfs:range rdf:resource="http://www.w3.org/ns/prov#Entity"/>
+  </owl:ObjectProperty>
+  <owl:ObjectProperty rdf:ID="hasEntities">
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+  </owl:ObjectProperty>
+  <owl:ObjectProperty rdf:ID="hasUpdates">
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+  </owl:ObjectProperty>
+  <owl:ObjectProperty rdf:ID="hasDeletes">
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+  </owl:ObjectProperty>
+  <owl:ObjectProperty rdf:ID="hasInserts">
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+  </owl:ObjectProperty>
+  <owl:DatatypeProperty rdf:ID="contextStart">
+    <rdfs:domain rdf:resource="#InfoContext"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+  </owl:DatatypeProperty>
+  <owl:DatatypeProperty rdf:ID="committer">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+  </owl:DatatypeProperty>
+  <owl:FunctionalProperty rdf:ID="modelType">
+    <rdfs:domain rdf:resource="#InfoModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="hasHeadCommit">
+    <rdfs:range rdf:resource="#InfoCommit"/>
+    <rdfs:domain rdf:resource="#InfoContext"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="nextInfoCommit">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:range rdf:resource="#InfoCommit"/>
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="graphDelete">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="graphInsert">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="commitTime">
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="graphBeforeUpdate">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="hasCommitContext">
+    <rdfs:range rdf:resource="#InfoContext"/>
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="instanceId">
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="commitId">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="modelTypeVersion">
+    <rdfs:domain rdf:resource="#InfoModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="nextInfoModel">
+    <rdfs:range rdf:resource="#InfoModel"/>
+    <rdfs:domain rdf:resource="#InfoModel"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="oid">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="http://www.w3.org/ns/prov#Entity"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="graphUpdate">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="contextId">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="#InfoContext"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="connectorId">
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="contextGraph">
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="#InfoContext"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </owl:FunctionalProperty>
+  <owl:FunctionalProperty rdf:ID="domainId">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:domain rdf:resource="#InfoCommit"/>
+  </owl:FunctionalProperty>
+  <owl:AnnotationProperty rdf:ID="hasInfoModel">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:range rdf:resource="#InfoModel"/>
+  </owl:AnnotationProperty>
+  <owl:AnnotationProperty rdf:ID="hasInfoCommit">
+    <rdfs:range rdf:resource="#InfoCommit"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </owl:AnnotationProperty>
+</rdf:RDF>
+
+<!-- Created with Protege (with OWL Plugin 3.5, Build 663)  http://protege.stanford.edu -->

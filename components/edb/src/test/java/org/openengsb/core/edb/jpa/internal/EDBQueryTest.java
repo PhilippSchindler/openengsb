@@ -34,7 +34,7 @@ import org.openengsb.core.api.model.CommitMetaInfo;
 import org.openengsb.core.api.model.CommitQueryRequest;
 import org.openengsb.core.api.model.QueryRequest;
 import org.openengsb.core.edb.api.EDBCommit;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EDBObjectEntry;
 
@@ -361,7 +361,7 @@ public class EDBQueryTest extends AbstractEDBTest {
         assertThat(test.getInserts().get(0).getString("test"), is("test"));
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testIfRetrievingCommitByInvalidRevisionFails_shouldFail() throws Exception {
         db.getCommitByRevision(UUID.randomUUID().toString());
     }

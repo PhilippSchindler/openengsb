@@ -29,7 +29,7 @@ import org.openengsb.core.api.model.ModelDescription;
 import org.openengsb.core.api.model.QueryRequest;
 import org.openengsb.core.edb.api.EDBCommit;
 import org.openengsb.core.edb.api.EDBConstants;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EngineeringDatabaseService;
 import org.openengsb.core.ekb.api.EKBCommit;
@@ -130,7 +130,7 @@ public class QueryInterfaceService implements EKBService {
         try {
             EDBCommit commit = edbService.getCommitByRevision(revision);
             return convertEDBCommitToEKBCommit(commit);
-        } catch (EDBException e) {
+        } catch (JenaException e) {
             throw new EKBException("There is no commit with the revision " + revision);
         }
     }

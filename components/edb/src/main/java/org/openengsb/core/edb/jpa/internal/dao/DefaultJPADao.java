@@ -34,7 +34,7 @@ import javax.persistence.criteria.Subquery;
 import org.openengsb.core.api.model.CommitMetaInfo;
 import org.openengsb.core.api.model.CommitQueryRequest;
 import org.openengsb.core.api.model.QueryRequest;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.jpa.internal.JPACommit;
 import org.openengsb.core.edb.jpa.internal.JPAHead;
 import org.openengsb.core.edb.jpa.internal.JPAObject;
@@ -57,7 +57,7 @@ public class DefaultJPADao implements JPADao {
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
-    public JPAHead getJPAHead(long timestamp) throws EDBException {
+    public JPAHead getJPAHead(long timestamp) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Loading head for timestamp {}", timestamp);
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -89,7 +89,7 @@ public class DefaultJPADao implements JPADao {
 
     @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public List<JPAObject> getJPAObjectHistory(String oid) throws EDBException {
+    public List<JPAObject> getJPAObjectHistory(String oid) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Loading the history for the object {}", oid);
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -106,7 +106,7 @@ public class DefaultJPADao implements JPADao {
 
     @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public List<JPAObject> getJPAObjectHistory(String oid, long from, long to) throws EDBException {
+    public List<JPAObject> getJPAObjectHistory(String oid, long from, long to) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Loading the history for the object {} from {} to {}", new Object[]{ oid, from, to });
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -126,7 +126,7 @@ public class DefaultJPADao implements JPADao {
 
     @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public JPAObject getJPAObject(String oid, long timestamp) throws EDBException {
+    public JPAObject getJPAObject(String oid, long timestamp) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Loading object {} for the time {}", oid, timestamp);
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -144,9 +144,9 @@ public class DefaultJPADao implements JPADao {
             List<JPAObject> resultList = typedQuery.getResultList();
 
             if (resultList.size() < 1) {
-                throw new EDBException("Failed to query existing object");
+                throw new JenaException("Failed to query existing object");
             } else if (resultList.size() > 1) {
-                throw new EDBException("Received more than 1 object which should not be possible!");
+                throw new JenaException("Received more than 1 object which should not be possible!");
             }
 
             return resultList.get(0);
@@ -154,7 +154,7 @@ public class DefaultJPADao implements JPADao {
     }
 
     @Override
-    public JPAObject getJPAObject(String oid) throws EDBException {
+    public JPAObject getJPAObject(String oid) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Loading newest object {}", oid);
             return getJPAObject(oid, System.currentTimeMillis());
@@ -163,7 +163,7 @@ public class DefaultJPADao implements JPADao {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
-    public List<JPAObject> getJPAObjects(List<String> oid) throws EDBException {
+    public List<JPAObject> getJPAObjects(List<String> oid) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Loading newest object {}", oid);
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -190,7 +190,7 @@ public class DefaultJPADao implements JPADao {
 
     @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public List<JPACommit> getJPACommit(String oid, long from, long to) throws EDBException {
+    public List<JPACommit> getJPACommit(String oid, long from, long to) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Loading all commits which involve object {} from {} to {}", new Object[]{ oid, from, to });
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -215,7 +215,7 @@ public class DefaultJPADao implements JPADao {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
-    public List<String> getResurrectedOIDs() throws EDBException {
+    public List<String> getResurrectedOIDs() throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("get resurrected JPA objects");
 
@@ -243,7 +243,7 @@ public class DefaultJPADao implements JPADao {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
-    public List<JPACommit> getJPACommit(long timestamp) throws EDBException {
+    public List<JPACommit> getJPACommit(long timestamp) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Load the commit for the timestamp {}", timestamp);
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -264,7 +264,7 @@ public class DefaultJPADao implements JPADao {
     }
 
     @Override
-    public JPACommit getJPACommit(String revision) throws EDBException {
+    public JPACommit getJPACommit(String revision) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Get commit for the revision {}", revision);
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -275,17 +275,17 @@ public class DefaultJPADao implements JPADao {
             List<JPACommit> result = typedQuery.getResultList();
             switch (result.size()) {
                 case 0:
-                    throw new EDBException("There is no commit with the given revision " + revision);
+                    throw new JenaException("There is no commit with the given revision " + revision);
                 case 1:
                     return result.get(0);
                 default:
-                    throw new EDBException("More than one commit with the given revision found!");
+                    throw new JenaException("More than one commit with the given revision found!");
             }
         }
     }
 
     @Override
-    public List<JPACommit> getCommits(Map<String, Object> param) throws EDBException {
+    public List<JPACommit> getCommits(Map<String, Object> param) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Get commits which are given to a param map with {} elements", param.size());
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -302,7 +302,7 @@ public class DefaultJPADao implements JPADao {
     }
 
     @Override
-    public JPACommit getLastCommit(Map<String, Object> param) throws EDBException {
+    public JPACommit getLastCommit(Map<String, Object> param) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Get last commit which are given to a param map with {} elements", param.size());
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -318,14 +318,14 @@ public class DefaultJPADao implements JPADao {
             try {
                 return typedQuery.getSingleResult();
             } catch (NoResultException ex) {
-                throw new EDBException("there was no Object found with the given query parameters", ex);
+                throw new JenaException("there was no Object found with the given query parameters", ex);
             }
         }
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
-    public List<CommitMetaInfo> getRevisionsOfMatchingCommits(CommitQueryRequest request) throws EDBException {
+    public List<CommitMetaInfo> getRevisionsOfMatchingCommits(CommitQueryRequest request) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Get matching revisions for the request {}", request);
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
@@ -399,7 +399,7 @@ public class DefaultJPADao implements JPADao {
     }
 
     @Override
-    public Integer getVersionOfOid(String oid) throws EDBException {
+    public Integer getVersionOfOid(String oid) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("loading version of model under the oid {}", oid);
 
@@ -421,7 +421,7 @@ public class DefaultJPADao implements JPADao {
     }
 
     @Override
-    public List<JPAObject> query(QueryRequest request) throws EDBException {
+    public List<JPAObject> query(QueryRequest request) throws JenaException {
         synchronized (entityManager) {
             LOGGER.debug("Perform query with the query object: {}", request);
             CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();

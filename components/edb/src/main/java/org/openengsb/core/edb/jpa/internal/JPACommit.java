@@ -31,7 +31,7 @@ import javax.persistence.InheritanceType;
 import javax.persistence.OneToMany;
 
 import org.openengsb.core.edb.api.EDBCommit;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.jpa.internal.util.EDBUtils;
 import org.slf4j.Logger;
@@ -147,7 +147,7 @@ public class JPACommit extends VersionedEntity implements EDBCommit {
     }
 
     @Override
-    public void delete(String oid) throws EDBException {
+    public void delete(String oid) throws JenaException {
         if (deletions.contains(oid)) {
             LOGGER.debug("could not delete object {} because it was never added", oid);
             return;
@@ -156,7 +156,7 @@ public class JPACommit extends VersionedEntity implements EDBCommit {
         LOGGER.debug("deleted object {} from the commit", oid);
     }
 
-    public void deleteAll(List<EDBObject> objects) throws EDBException {
+    public void deleteAll(List<EDBObject> objects) throws JenaException {
         if (objects != null) {
             for (EDBObject object : objects) {
                 delete(object.getOID());
@@ -165,14 +165,14 @@ public class JPACommit extends VersionedEntity implements EDBCommit {
     }
 
     @Override
-    public void insert(EDBObject obj) throws EDBException {
+    public void insert(EDBObject obj) throws JenaException {
         if (!inserts.contains(obj)) {
             inserts.add(EDBUtils.convertEDBObjectToJPAObject(obj));
             LOGGER.debug("Added object {} to the commit for inserting", obj.getOID());
         }
     }
 
-    public void insertAll(List<EDBObject> objects) throws EDBException {
+    public void insertAll(List<EDBObject> objects) throws JenaException {
         if (objects != null) {
             for (EDBObject object : objects) {
                 insert(object);
@@ -181,14 +181,14 @@ public class JPACommit extends VersionedEntity implements EDBCommit {
     }
 
     @Override
-    public void update(EDBObject obj) throws EDBException {
+    public void update(EDBObject obj) throws JenaException {
         if (!updates.contains(obj)) {
             updates.add(EDBUtils.convertEDBObjectToJPAObject(obj));
             LOGGER.debug("Added object {} to the commit for updating", obj.getOID());
         }
     }
 
-    public void updateAll(List<EDBObject> objects) throws EDBException {
+    public void updateAll(List<EDBObject> objects) throws JenaException {
         if (objects != null) {
             for (EDBObject object : objects) {
                 update(object);

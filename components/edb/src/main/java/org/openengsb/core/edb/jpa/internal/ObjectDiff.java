@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.openengsb.core.edb.api.EDBEntry;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EDBObjectDiff;
 import org.openengsb.core.edb.api.EDBObjectEntry;
@@ -41,7 +41,7 @@ public class ObjectDiff implements EDBObjectDiff {
     private Integer differences;
 
     public ObjectDiff(JPACommit startCommit, JPACommit endCommit,
-            EDBObject startState, EDBObject endState) throws EDBException {
+            EDBObject startState, EDBObject endState) throws JenaException {
         Preconditions.checkNotNull(startState, "start state is null!");
         Preconditions.checkNotNull(endState, "end state is null!");
 
@@ -65,7 +65,7 @@ public class ObjectDiff implements EDBObjectDiff {
      * checks for start state and end state which key/value pairs are in common and which have been changed, added or
      * deleted
      */
-    private void updateDiff() throws EDBException {
+    private void updateDiff() throws JenaException {
         List<String> keyList = loadKeyList();
 
         for (String key : keyList) {

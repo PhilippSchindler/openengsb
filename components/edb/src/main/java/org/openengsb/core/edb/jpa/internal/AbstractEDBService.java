@@ -23,7 +23,7 @@ import java.util.List;
 import javax.persistence.EntityManager;
 
 import org.openengsb.core.edb.api.EDBCommit;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EngineeringDatabaseService;
 import org.openengsb.core.edb.api.hooks.EDBBeginCommitHook;
@@ -61,19 +61,19 @@ public abstract class AbstractEDBService implements EngineeringDatabaseService {
     /**
      * Performs the actual commit logic for the EDB, including the hooks and the revision checking.
      */
-    protected Long performCommitLogic(EDBCommit commit) throws EDBException {
+    protected Long performCommitLogic(EDBCommit commit) throws JenaException {
         if (!(commit instanceof JPACommit)) {
-            throw new EDBException("The given commit type is not supported.");
+            throw new JenaException("The given commit type is not supported.");
         }
         if (commit.isCommitted()) {
-            throw new EDBException("EDBCommit is already commitet.");
+            throw new JenaException("EDBCommit is already commitet.");
         }
         if (revisionCheckEnabled && commit.getParentRevisionNumber() != null
                 && !commit.getParentRevisionNumber().equals(getCurrentRevisionNumber())) {
-            throw new EDBException("EDBCommit do not have the correct head revision number.");
+            throw new JenaException("EDBCommit do not have the correct head revision number.");
         }
         runBeginCommitHooks(commit);
-        EDBException exception = runPreCommitHooks(commit);
+        JenaException exception = runPreCommitHooks(commit);
         if (exception != null) {
             return runErrorHooks(commit, exception);
         }
@@ -87,7 +87,7 @@ public abstract class AbstractEDBService implements EngineeringDatabaseService {
      * Does the actual commit work (JPA related actions) and returns the timestamp when the commit was done. Throws an
      * EDBException if an error occurs.
      */
-    private Long performCommit(JPACommit commit) throws EDBException {
+    private Long performCommit(JPACommit commit) throws JenaException {
         synchronized (entityManager) {
             long timestamp = System.currentTimeMillis();
             try {
@@ -98,9 +98,9 @@ public abstract class AbstractEDBService implements EngineeringDatabaseService {
                 try {
                     rollbackTransaction();
                 } catch (Exception e) {
-                    throw new EDBException("Failed to rollback transaction to EDB", e);
+                    throw new JenaException("Failed to rollback transaction to EDB", e);
                 }
-                throw new EDBException("Failed to commit transaction to EDB", ex);
+                throw new JenaException("Failed to commit transaction to EDB", ex);
             }
             return timestamp;
         }
@@ -147,13 +147,13 @@ public abstract class AbstractEDBService implements EngineeringDatabaseService {
      * for ServiceUnavailableExceptions and EDBExceptions. If an EDBException occurs, it is thrown and so returned to
      * the calling instance.
      */
-    private void runBeginCommitHooks(EDBCommit commit) throws EDBException {
+    private void runBeginCommitHooks(EDBCommit commit) throws JenaException {
         for (EDBBeginCommitHook hook : beginCommitHooks) {
             try {
                 hook.onStartCommit(commit);
             } catch (ServiceUnavailableException e) {
                 // Ignore
-            } catch (EDBException e) {
+            } catch (JenaException e) {
                 throw e;
             } catch (Exception e) {
                 logger.error("Error while performing EDBBeginCommitHook", e);
@@ -166,14 +166,14 @@ public abstract class AbstractEDBService implements EngineeringDatabaseService {
      * for ServiceUnavailableExceptions and EDBExceptions. If an EDBException occurs, the function returns this
      * exception.
      */
-    private EDBException runPreCommitHooks(EDBCommit commit) {
-        EDBException exception = null;
+    private JenaException runPreCommitHooks(EDBCommit commit) {
+        JenaException exception = null;
         for (EDBPreCommitHook hook : preCommitHooks) {
             try {
                 hook.onPreCommit(commit);
             } catch (ServiceUnavailableException e) {
                 // Ignore
-            } catch (EDBException e) {
+            } catch (JenaException e) {
                 exception = e;
                 break;
             } catch (Exception e) {
@@ -189,7 +189,7 @@ public abstract class AbstractEDBService implements EngineeringDatabaseService {
      * the error with the new Exception. If an error hook returns a new EDBCommit, the EDB tries to persist this commit
      * instead.
      */
-    private Long runErrorHooks(EDBCommit commit, EDBException exception) throws EDBException {
+    private Long runErrorHooks(EDBCommit commit, JenaException exception) throws JenaException {
         for (EDBErrorHook hook : errorHooks) {
             try {
                 EDBCommit newCommit = hook.onError(commit, exception);
@@ -198,7 +198,7 @@ public abstract class AbstractEDBService implements EngineeringDatabaseService {
                 }
             } catch (ServiceUnavailableException e) {
                 // Ignore
-            } catch (EDBException e) {
+            } catch (JenaException e) {
                 exception = e;
                 break;
             } catch (Exception e) {
@@ -238,9 +238,9 @@ public abstract class AbstractEDBService implements EngineeringDatabaseService {
                 try {
                     rollbackTransaction();
                 } catch (Exception e) {
-                    throw new EDBException("Failed to rollback transaction to EDB", e);
+                    throw new JenaException("Failed to rollback transaction to EDB", e);
                 }
-                throw new EDBException("Failed to commit transaction to EDB", ex);
+                throw new JenaException("Failed to commit transaction to EDB", ex);
             }
         }
     }

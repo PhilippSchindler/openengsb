@@ -27,7 +27,7 @@ import org.openengsb.core.api.context.ContextHolder;
 import org.openengsb.core.edb.api.EDBCheckException;
 import org.openengsb.core.edb.api.EDBCommit;
 import org.openengsb.core.edb.api.EDBConstants;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EngineeringDatabaseService;
 import org.openengsb.core.ekb.api.EKBCommit;
@@ -187,7 +187,7 @@ public class PersistInterfaceService implements EKBService {
             newCommit.setComment(String.format("revert [%s] %s", commit.getRevisionNumber().toString(),
                     commit.getComment() != null ? commit.getComment() : ""));
             edbService.commit(newCommit);
-        } catch (EDBException e) {
+        } catch (JenaException e) {
             throw new EKBException("Unable to revert to the given revision " + revision, e);
         } finally {
             releaseContext(contextId);
@@ -301,7 +301,7 @@ public class PersistInterfaceService implements EKBService {
         } catch (EDBCheckException e) {
             throw new ModelPersistException(convertEDBObjectList(e.getFailedInserts()),
                     convertEDBObjectList(e.getFailedUpdates()), e.getFailedDeletes(), e);
-        } catch (EDBException e) {
+        } catch (JenaException e) {
             throw new EKBException("Error while commiting EKBCommit", e);
         }
     }
@@ -326,7 +326,7 @@ public class PersistInterfaceService implements EKBService {
             lockContext(contextId);
             checkForContextHeadRevision(contextId, revision);
             edbService.deleteCommit(revision);
-        } catch (EDBException e) {
+        } catch (JenaException e) {
             throw new EKBException("Error reverting commit with revision " + revision, e);
         } finally {
             releaseContext(contextId);
@@ -344,7 +344,7 @@ public class PersistInterfaceService implements EKBService {
             lockContext(contextId);
             checkHeadRevision(headRevision);
             edbService.deleteCommit(headRevision);
-        } catch (EDBException e) {
+        } catch (JenaException e) {
             throw new EKBException("Error reverting commit with revision " + headRevision, e);
         } finally {
             releaseContext(contextId);

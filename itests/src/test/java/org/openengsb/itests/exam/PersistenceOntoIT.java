@@ -45,7 +45,7 @@ import org.openengsb.core.api.model.OpenEngSBModelEntry;
 import org.openengsb.core.api.model.QueryRequest;
 import org.openengsb.core.edb.api.EDBCommit;
 import org.openengsb.core.edb.api.EDBConstants;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EngineeringDatabaseService;
 import org.openengsb.core.ekb.api.EDBQueryFilter;
@@ -102,7 +102,7 @@ public class PersistenceOntoIT extends AbstractModelUsingExamTestHelper {
         assertThat(testtime.longValue(), not(0L));
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testDoubleCommit_shouldThrowException() throws Exception {
         EDBCommit commit = edbService.createEDBCommit(null, null, null);
         edbService.commit(commit);
@@ -162,7 +162,7 @@ public class PersistenceOntoIT extends AbstractModelUsingExamTestHelper {
         assertThat(result.size(), is(3));
     }
 
-    @Test(expected = EDBException.class)
+    @Test(expected = JenaException.class)
     public void testConflictDetection_shouldThrowException() throws Exception {
         EDBCommit commit = edbService.createEDBCommit(null, null, null);
         EDBObject testObject = new EDBObject("newtestobject2");

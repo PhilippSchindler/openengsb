@@ -30,7 +30,7 @@ import org.openengsb.core.api.model.QueryRequest;
 import org.openengsb.core.edb.api.EDBCommit;
 import org.openengsb.core.edb.api.EDBConstants;
 import org.openengsb.core.edb.api.EDBDiff;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBLogEntry;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EngineeringDatabaseService;
@@ -50,7 +50,7 @@ public class TestEngineeringDatabaseService implements EngineeringDatabaseServic
     }
 
     @Override
-    public EDBObject getObject(String arg0, Long timestamp) throws EDBException {
+    public EDBObject getObject(String arg0, Long timestamp) throws JenaException {
         if (arg0.equals(getModelOid("objectA/reference/1"))) {
             EDBObject edbObject = new EDBObject(getModelOid("objectA/reference/1"));
             edbObject.putEDBObjectEntry("nameA", "firstObject");
@@ -97,12 +97,12 @@ public class TestEngineeringDatabaseService implements EngineeringDatabaseServic
     }
 
     @Override
-    public EDBObject getObject(String oid) throws EDBException {
+    public EDBObject getObject(String oid) throws JenaException {
         return getObject(oid, null);
     }
 
     @Override
-    public List<EDBObject> query(QueryRequest request) throws EDBException {
+    public List<EDBObject> query(QueryRequest request) throws JenaException {
         String reference = (String) request.getParameter(EDBConverter.REFERENCE_PREFIX + "%").iterator().next();
         if (reference.equals(getModelOid("objectA/reference/1"))
                 || reference.equals(getModelOid("objectB/reference/1"))) {
@@ -119,113 +119,113 @@ public class TestEngineeringDatabaseService implements EngineeringDatabaseServic
     }
 
     @Override
-    public Long commit(EDBCommit arg0) throws EDBException {
+    public Long commit(EDBCommit arg0) throws JenaException {
         return null;
     }
 
     @Override
-    public EDBCommit getCommit(Long arg0) throws EDBException {
+    public EDBCommit getCommit(Long arg0) throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBCommit> getCommits(Map<String, Object> arg0) throws EDBException {
+    public List<EDBCommit> getCommits(Map<String, Object> arg0) throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBCommit> getCommitsByKeyValue(String arg0, Object arg1) throws EDBException {
+    public List<EDBCommit> getCommitsByKeyValue(String arg0, Object arg1) throws JenaException {
         return null;
     }
 
     @Override
-    public EDBDiff getDiff(Long arg0, Long arg1) throws EDBException {
+    public EDBDiff getDiff(Long arg0, Long arg1) throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBObject> getHead() throws EDBException {
+    public List<EDBObject> getHead() throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBObject> getHead(long arg0) throws EDBException {
+    public List<EDBObject> getHead(long arg0) throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBObject> getHistory(String arg0) throws EDBException {
+    public List<EDBObject> getHistory(String arg0) throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBObject> getHistoryForTimeRange(String arg0, Long arg1, Long arg2) throws EDBException {
+    public List<EDBObject> getHistoryForTimeRange(String arg0, Long arg1, Long arg2) throws JenaException {
         return null;
     }
 
     @Override
-    public EDBCommit getLastCommit(Map<String, Object> arg0) throws EDBException {
+    public EDBCommit getLastCommit(Map<String, Object> arg0) throws JenaException {
         return null;
     }
 
     @Override
-    public EDBCommit getLastCommitByKeyValue(String arg0, Object arg1) throws EDBException {
+    public EDBCommit getLastCommitByKeyValue(String arg0, Object arg1) throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBLogEntry> getLog(String arg0, Long arg1, Long arg2) throws EDBException {
+    public List<EDBLogEntry> getLog(String arg0, Long arg1, Long arg2) throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBObject> getObjects(List<String> arg0) throws EDBException {
+    public List<EDBObject> getObjects(List<String> arg0) throws JenaException {
         return null;
     }
 
     @Override
-    public List<String> getResurrectedOIDs() throws EDBException {
+    public List<String> getResurrectedOIDs() throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBObject> getStateOfLastCommitMatching(Map<String, Object> arg0) throws EDBException {
+    public List<EDBObject> getStateOfLastCommitMatching(Map<String, Object> arg0) throws JenaException {
         return null;
     }
 
     @Override
-    public List<EDBObject> getStateOfLastCommitMatchingByKeyValue(String arg0, Object arg1) throws EDBException {
+    public List<EDBObject> getStateOfLastCommitMatchingByKeyValue(String arg0, Object arg1) throws JenaException {
         return null;
     }
 
     @Override
     public EDBCommit createEDBCommit(List<EDBObject> arg0, List<EDBObject> arg1, List<EDBObject> arg2)
-        throws EDBException {
+        throws JenaException {
         return null;
     }
 
     @Override
-    public UUID getCurrentRevisionNumber() throws EDBException {
+    public UUID getCurrentRevisionNumber() throws JenaException {
         return null;
     }
 
     @Override
-    public UUID getLastRevisionNumberOfContext(String contextId) throws EDBException {
+    public UUID getLastRevisionNumberOfContext(String contextId) throws JenaException {
         return null;
     }
 
     @Override
-    public EDBCommit getCommitByRevision(String revision) throws EDBException {
+    public EDBCommit getCommitByRevision(String revision) throws JenaException {
         return null;
     }
 
     @Override
-    public List<CommitMetaInfo> getRevisionsOfMatchingCommits(CommitQueryRequest request) throws EDBException {
+    public List<CommitMetaInfo> getRevisionsOfMatchingCommits(CommitQueryRequest request) throws JenaException {
         return null;
     }
 
     @Override
-    public void deleteCommit(UUID revision) throws EDBException {
+    public void deleteCommit(UUID revision) throws JenaException {
     }
 
 }

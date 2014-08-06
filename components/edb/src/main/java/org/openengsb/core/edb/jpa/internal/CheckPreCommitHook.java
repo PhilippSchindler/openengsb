@@ -23,7 +23,7 @@ import java.util.List;
 import org.openengsb.core.edb.api.EDBCheckException;
 import org.openengsb.core.edb.api.EDBCommit;
 import org.openengsb.core.edb.api.EDBConstants;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.hooks.EDBPreCommitHook;
 import org.openengsb.core.edb.jpa.internal.dao.JPADao;
 import org.openengsb.core.edb.jpa.internal.util.EDBUtils;
@@ -44,9 +44,9 @@ public class CheckPreCommitHook implements EDBPreCommitHook {
     }
 
     @Override
-    public void onPreCommit(EDBCommit commit) throws EDBException {
+    public void onPreCommit(EDBCommit commit) throws JenaException {
         if (!(commit instanceof JPACommit)) {
-            throw new EDBException("Unsupported EDBCommit type");
+            throw new JenaException("Unsupported EDBCommit type");
         }
         JPACommit orig = (JPACommit) commit;
         List<JPAObject> insertFails = null;
@@ -125,7 +125,7 @@ public class CheckPreCommitHook implements EDBPreCommitHook {
     /**
      * Checks every update for a potential conflict. Returns a list of objects where a conflict has been found.
      */
-    private List<JPAObject> checkUpdates(List<JPAObject> updates) throws EDBException {
+    private List<JPAObject> checkUpdates(List<JPAObject> updates) throws JenaException {
         List<JPAObject> failedObjects = new ArrayList<JPAObject>();
         for (JPAObject update : updates) {
             try {
@@ -134,7 +134,7 @@ public class CheckPreCommitHook implements EDBPreCommitHook {
                 update.removeEntry(EDBConstants.MODEL_VERSION);
                 update.addEntry(new JPAEntry(EDBConstants.MODEL_VERSION, modelVersion + "", 
                     Integer.class.getName(), update));
-            } catch (EDBException e) {
+            } catch (JenaException e) {
                 failedObjects.add(update);
             }
         }
@@ -144,7 +144,7 @@ public class CheckPreCommitHook implements EDBPreCommitHook {
     /**
      * Investigates the version of an JPAObject and checks if a conflict can be found.
      */
-    private Integer investigateVersionAndCheckForConflict(JPAObject newObject) throws EDBException {
+    private Integer investigateVersionAndCheckForConflict(JPAObject newObject) throws JenaException {
         JPAEntry entry = newObject.getEntry(EDBConstants.MODEL_VERSION);
         String oid = newObject.getOID();
         Integer modelVersion = 0;
@@ -155,9 +155,9 @@ public class CheckPreCommitHook implements EDBPreCommitHook {
             if (!modelVersion.equals(currentVersion)) {
                 try {
                     checkForConflict(newObject);
-                } catch (EDBException e) {
+                } catch (JenaException e) {
                     LOGGER.info("conflict detected, user get informed");
-                    throw new EDBException("conflict was detected. There is a newer version of the model with the oid "
+                    throw new JenaException("conflict was detected. There is a newer version of the model with the oid "
                             + oid + " saved.");
                 }
                 modelVersion = currentVersion;
@@ -173,7 +173,7 @@ public class CheckPreCommitHook implements EDBPreCommitHook {
      * Simple check mechanism if there is a conflict between a model which should be saved and the existing model, based
      * on the values which are in the EDB.
      */
-    private void checkForConflict(JPAObject newObject) throws EDBException {
+    private void checkForConflict(JPAObject newObject) throws JenaException {
         String oid = newObject.getOID();
         JPAObject object = dao.getJPAObject(oid);
         for (JPAEntry entry : newObject.getEntries()) {
@@ -185,7 +185,7 @@ public class CheckPreCommitHook implements EDBPreCommitHook {
             if (value == null || !value.equals(entry.getValue())) {
                 LOGGER.debug("Conflict detected at key {} when comparing {} with {}", new Object[]{ entry.getKey(),
                     entry.getValue(), value == null ? "null" : value });
-                throw new EDBException("Conflict detected. Failure when comparing the values of the key "
+                throw new JenaException("Conflict detected. Failure when comparing the values of the key "
                         + entry.getKey());
             }
         }
@@ -200,7 +200,7 @@ public class CheckPreCommitHook implements EDBPreCommitHook {
             if (!obj.isDeleted()) {
                 return true;
             }
-        } catch (EDBException e) {
+        } catch (JenaException e) {
             // nothing to do here
         }
         return false;

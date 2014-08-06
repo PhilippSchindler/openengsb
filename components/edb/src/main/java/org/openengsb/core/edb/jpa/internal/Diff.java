@@ -25,7 +25,7 @@ import java.util.Map;
 
 import org.openengsb.core.edb.api.EDBDiff;
 import org.openengsb.core.edb.api.EDBEntry;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EDBObjectDiff;
 import org.slf4j.Logger;
@@ -40,7 +40,7 @@ public class Diff implements EDBDiff {
     private HashMap<String, EDBObjectDiff> diff;
 
     public Diff(JPACommit startCommit, JPACommit endCommit, List<EDBObject> startState,
-            List<EDBObject> endState) throws EDBException {
+            List<EDBObject> endState) throws JenaException {
         if (endCommit.getTimestamp() < startCommit.getTimestamp()) {
             this.startCommit = endCommit;
             this.endCommit = startCommit;
@@ -60,7 +60,7 @@ public class Diff implements EDBDiff {
     /**
      * Analyzes the start and end state and creates for every object that is different an objectdiff entry
      */
-    private void createObjectDiffs() throws EDBException {
+    private void createObjectDiffs() throws JenaException {
         diff = new HashMap<String, EDBObjectDiff>();
         List<EDBObject> tempList = new ArrayList<EDBObject>();
         for (EDBObject o : this.endState) {

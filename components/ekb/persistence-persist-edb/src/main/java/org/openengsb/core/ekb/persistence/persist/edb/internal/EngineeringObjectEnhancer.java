@@ -28,7 +28,7 @@ import java.util.Map;
 import org.openengsb.core.api.model.ModelDescription;
 import org.openengsb.core.api.model.OpenEngSBModel;
 import org.openengsb.core.edb.api.EDBConstants;
-import org.openengsb.core.edb.api.EDBException;
+import org.openengsb.core.edb.api.JenaException;
 import org.openengsb.core.edb.api.EDBObject;
 import org.openengsb.core.edb.api.EngineeringDatabaseService;
 import org.openengsb.core.ekb.api.EKBCommit;
@@ -191,7 +191,7 @@ public class EngineeringObjectEnhancer implements EKBPreCommitHook {
                 if (result != null) {
                     updates.add(result);
                 }
-            } catch (EDBException e) {
+            } catch (JenaException e) {
                 LOGGER.debug("Skipped referenced model for field {}, since it does not exist.", field, e);
             }
         }
