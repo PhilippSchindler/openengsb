@@ -44,28 +44,33 @@ import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.tdb.TDBFactory;
 
 @RunWith(MockitoJUnitRunner.class)
-public class PersistInterfaceServiceTest {
+public class MultiContextCommitTest {
     private EKBService service;
     private JenaConverter ontoConverter;
     protected AuthenticationContext authContext;
 
     @Before
     public void setUp() {
+        initService("test-1", "fajar", true);
+    }
+
+    private void initService(String context, String committer, boolean isReset) {
+
         Dataset dataset = TDBFactory.createDataset("src/test/resources/tdb");
         Model model = RDFDataMgr.loadModel(JenaConstants.CDL_TEMPLATE);
         ontoConverter = new JenaConverter();
 
         // mockito stuff
         authContext = mock(AuthenticationContext.class);
-        when(authContext.getAuthenticatedPrincipal()).thenReturn("Fajar");
+        when(authContext.getAuthenticatedPrincipal()).thenReturn(committer);
 
-        OntoService ontoService = new JenaService(dataset, model, true);
+        OntoService ontoService = new JenaService(dataset, model, isReset);
         List<EKBPreCommitHook> preHooks = new ArrayList<EKBPreCommitHook>();
         List<EKBPostCommitHook> postHooks = new ArrayList<EKBPostCommitHook>();
         List<EKBErrorHook> errorHooks = new ArrayList<EKBErrorHook>();
 
         this.service = new EKBServiceJena(ontoService, ontoConverter, preHooks, postHooks, errorHooks, authContext);
-        ContextHolder.get().setCurrentContextId("test");
+        ContextHolder.get().setCurrentContextId(context);
     }
 
     private EKBCommit createTestInsert() {
@@ -155,7 +160,7 @@ public class PersistInterfaceServiceTest {
         test2.setName("A2_Fajar YYY");
 
         commit.addInsert(test);
-        commit.addUpdate(test2);
+        commit.addInsert(test2);
 
         return commit;
     }
@@ -181,6 +186,9 @@ public class PersistInterfaceServiceTest {
     public void testConvertEKBCommitToOntoTDB_shouldWork() throws Exception {
         service.commit(createTestInsert1());
         service.commit(createTestInsert2());
+
+        initService("test-2", "juang", false);
+
         service.commit(createTestInsert3());
         service.commit(createTestInsert4());
     }

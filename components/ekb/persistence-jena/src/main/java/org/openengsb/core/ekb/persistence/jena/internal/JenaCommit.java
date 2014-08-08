@@ -1,6 +1,7 @@
 package org.openengsb.core.ekb.persistence.jena.internal;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,14 +16,14 @@ public class JenaCommit {
 
     private final List<Resource> inserts;
     private final List<Resource> updates;
-    private final List<Resource> deletes;
+    private final List<String> deletes;
 
     private final String committer;
     private final String context;
     private final UUID revision;
 
     private Boolean committed = false;
-    private Long timestamp;
+    private Calendar timestamp;
     private String comment;
     private UUID parentRevision;
     private UUID childRevision;
@@ -44,7 +45,7 @@ public class JenaCommit {
 
         inserts = new ArrayList<Resource>();
         updates = new ArrayList<Resource>();
-        deletes = new ArrayList<Resource>();
+        deletes = new ArrayList<String>();
 
         this.revision = UUID.randomUUID();
     }
@@ -57,7 +58,7 @@ public class JenaCommit {
         updates.add(obj);
     }
 
-    public void delete(Resource oid) throws OntoException {
+    public void delete(String oid) throws OntoException {
         deletes.add(oid);
     }
 
@@ -69,11 +70,11 @@ public class JenaCommit {
         this.committed = committed;
     }
 
-    public Long getTimestamp() {
+    public Calendar getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(Long timestamp) {
+    public void setTimestamp(Calendar timestamp) {
         this.timestamp = timestamp;
     }
 
@@ -137,7 +138,7 @@ public class JenaCommit {
         return updates;
     }
 
-    public List<Resource> getDeletes() {
+    public List<String> getDeletes() {
         return deletes;
     }
 

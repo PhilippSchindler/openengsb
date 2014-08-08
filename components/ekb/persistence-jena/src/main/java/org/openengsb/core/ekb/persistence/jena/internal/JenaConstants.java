@@ -26,72 +26,55 @@ public final class JenaConstants {
         // this class should not be instantiated
     }
 
-    /**
-     * Defines the string which represents the key for a model oid.
-     */
-    public static final String MODEL_OID = "modelId";
-
-    /**
-     * Defines the string which represents the key for a model version.
-     */
-    public static final String MODEL_VERSION = "modelVersion";
-
-    /**
-     * Defines the string which represents the key for a model timestamp.
-     */
-    public static final String MODEL_TIMESTAMP = "modelTimeStamp";
-
-    /**
-     * Defines the string which represents the key for the type of a model.
-     */
-    public static final String MODEL_TYPE = "modelType";
-
-    /**
-     * Defines the string which represents the key for the version of the
-     * corresponding model type.
-     */
-    public static final String MODEL_TYPE_VERSION = "modelTypeVersion";
-
+    // namespaces
     public static final String CDL_NAMESPACE = "http://cdlflex.org/ekb#";
+    public static final String PROV_NAMESPACE = "http://www.w3.org/ns/prov#";
+    public static final String RDF_NAMESPACE = "http://www.w3.org/2002/07/owl#";
+    public static final String RDFS_NAMESPACE = "http://www.w3.org/2000/01/rdf-schema#";
 
-    // class link
-    public static final String CDL_INFO_COMMIT = CDL_NAMESPACE + "InfoCommit";
-    public static final String CDL_INFO_MODEL = CDL_NAMESPACE + "InfoModel";
-    public static final String CDL_INFO_CONTEXT = CDL_NAMESPACE + "InfoContext";
-    public static final String CDL_HAS_INFO_MODEL = CDL_NAMESPACE + "hasInfoModel";
+    // concepts
+    public static final String CDL_COMMIT = CDL_NAMESPACE + "Commit";
+    public static final String CDL_MODEL = CDL_NAMESPACE + "Model";
+    public static final String CDL_CONTEXT = CDL_NAMESPACE + "Context";
+
+    // annotation property
+    public static final String CDL_HAS_MODEL = CDL_NAMESPACE + "hasModel";
 
     // commit class properties
-    public static final String CDL_COMMIT_ID = CDL_NAMESPACE + "commitId";
-    public static final String CDL_COMMIT_TIMESTAMP = CDL_NAMESPACE + "commitTime";
-    public static final String CDL_COMMIT_CONNECTOR_ID = CDL_NAMESPACE + "connectorId";
-    public static final String CDL_COMMIT_CONTEXT_ID = CDL_NAMESPACE + "contextId";
-    public static final String CDL_COMMIT_DOMAIN_ID = CDL_NAMESPACE + "domainId";
-    public static final String CDL_COMMIT_INSTANCE_ID = CDL_NAMESPACE + "instanceId";
+    public static final String CDL_COMMIT_REVISION = CDL_NAMESPACE + "revision";
     public static final String CDL_COMMIT_COMMITTER = CDL_NAMESPACE + "committer";
-
-    public static final String CDL_COMMIT_NEXT = CDL_NAMESPACE + "nextInfoCommit";
-    public static final String CDL_COMMIT_PREV = CDL_NAMESPACE + "prevInfoCommit";
+    public static final String CDL_COMMIT_DOMAIN_ID = CDL_NAMESPACE + "domainId";
+    public static final String CDL_COMMIT_CONNECTOR_ID = CDL_NAMESPACE + "connectorId";
+    public static final String CDL_COMMIT_INSTANCE_ID = CDL_NAMESPACE + "instanceId";
+    public static final String CDL_COMMIT_COMMENT = CDL_NAMESPACE + "comment";
+    public static final String CDL_COMMIT_TIMESTAMP = PROV_NAMESPACE + "startedAtTime";
+    public static final String CDL_COMMIT_CHILD_REVISION = CDL_NAMESPACE + "hasChildRevision";
+    public static final String CDL_COMMIT_PARENT_REVISION = CDL_NAMESPACE + "hasParentRevision";
     public static final String CDL_COMMIT_CONTEXT = CDL_NAMESPACE + "hasCommitContext";
-
-    public static final String CDL_COMMIT_LIST_INSERT = CDL_NAMESPACE + "hasInserts";
-    public static final String CDL_COMMIT_LIST_UPDATE = CDL_NAMESPACE + "hasUpdates";
-    public static final String CDL_COMMIT_LIST_DELETE = CDL_NAMESPACE + "hasDeletes";
-    public static final String CDL_COMMIT_LIST_ENTITY = CDL_NAMESPACE + "hasEntities";
+    public static final String CDL_COMMIT_INSERTS = CDL_NAMESPACE + "hasInserts";
+    public static final String CDL_COMMIT_UPDATES = CDL_NAMESPACE + "hasUpdates";
+    public static final String CDL_COMMIT_DELETES = CDL_NAMESPACE + "hasDeletes";
+    public static final String CDL_COMMIT_ENTITIES = CDL_NAMESPACE + "hasEntities";
 
     // context class properties
-    public static final String CDL_CONTEXT_COMMIT = CDL_NAMESPACE + "hasContextCommit";
     public static final String CDL_CONTEXT_HEAD_COMMIT = CDL_NAMESPACE + "hasHeadCommit";
-    public static final String CDL_CONTEXT_GRAPH = CDL_NAMESPACE + "contextGraph";
     public static final String CDL_CONTEXT_ID = CDL_NAMESPACE + "contextId";
-    public static final String CDL_CONTEXT_START = CDL_NAMESPACE + "contextStart";
 
     // model class properties
     public static final String CDL_MODEL_TYPE = CDL_NAMESPACE + "modelType";
     public static final String CDL_MODEL_TYPE_VERSION = CDL_NAMESPACE + "modelTypeVersion";
-    public static final String CDL_MODEL_NEXT = CDL_NAMESPACE + "nextInfoModel";
+    public static final String CDL_MODEL_PARENT_MODEL = CDL_NAMESPACE + "hasParentModel";
 
-    // others
+    // generated primary key
     public static final String CDL_OID = CDL_NAMESPACE + "oid";
+
+    // owl template
     public static final String CDL_TEMPLATE = "src/main/resources/ekb.owl";
+
+    // model instance properties
+    public static final String PROV_REVISION = PROV_NAMESPACE + "wasRevisionOf";
+    public static final String PROV_ENTITY = PROV_NAMESPACE + "Entity";
+    public static final String RDF_TYPE = RDF_NAMESPACE + "type";
+    public static final String RDFS_SUBCLASS = RDFS_NAMESPACE + "subClassOf";
 
 }

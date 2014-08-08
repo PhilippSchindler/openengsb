@@ -2,6 +2,8 @@ package org.openengsb.core.ekb.persistence.jena.internal;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,6 +29,7 @@ import com.hp.hpl.jena.ontology.OntClass;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.vocabulary.XSD;
 
@@ -49,7 +52,7 @@ public class JenaConverter {
         JenaCommit result = new JenaCommit(ContextHolder.get().getCurrentContextId(),
                 (String) authContext.getAuthenticatedPrincipal());
 
-        result.setTimestamp(System.currentTimeMillis());
+        result.setTimestamp(Calendar.getInstance());
         result.setConnectorId(information.getConnectorId());
         result.setDomainId(information.getDomainId());
         result.setInstanceId(information.getInstanceId());
@@ -59,13 +62,29 @@ public class JenaConverter {
 
         result.getInserts().addAll(convertModelsToJenaResources(model, commit.getInserts()));
         result.getUpdates().addAll(convertModelsToJenaResources(model, commit.getUpdates()));
-        result.getDeletes().addAll(convertModelsToJenaResources(model, commit.getDeletes()));
+        result.getDeletes().addAll(convertCommitDeletes(commit.getDeletes()));
 
         LOGGER.info("OntoConverter done converting commit: " + result.getRevision());
         // TODO: test purpose only
         OwlHelper.save(model, "src/test/resources/test-insert.owl");
 
         return result;
+    }
+
+    public List<String> convertCommitDeletes(List<OpenEngSBModel> deletes) {
+        List<String> delList = new ArrayList<String>();
+
+        if (deletes != null && !deletes.isEmpty()) {
+            Iterator<OpenEngSBModel> iter = deletes.iterator();
+
+            while (iter.hasNext()) {
+                OpenEngSBModel instance = iter.next();
+                String oid = ModelWrapper.wrap(instance).getCompleteModelOID();
+                delList.add(oid);
+            }
+        }
+
+        return delList;
     }
 
     /**
@@ -105,8 +124,11 @@ public class JenaConverter {
     private Resource convertSubModel(OpenEngSBModel instance, List<Resource> objects, OntModel model) {
         String oid = ModelWrapper.wrap(instance).getCompleteModelOID();
 
+        OntClass provCls = model.createClass(JenaConstants.PROV_ENTITY);
         OntClass modelCls = model.createClass(JenaConstants.CDL_NAMESPACE + instance.getClass().getSimpleName());
         Individual object = model.createIndividual(JenaConstants.CDL_NAMESPACE + UUID.randomUUID(), modelCls);
+        Property rdfsSubClass = model.createProperty(JenaConstants.RDFS_SUBCLASS);
+        modelCls.setPropertyValue(rdfsSubClass, provCls);
 
         DatatypeProperty oidProp = model.createDatatypeProperty(JenaConstants.CDL_OID);
         object.addProperty(oidProp, oid);
@@ -229,22 +251,20 @@ public class JenaConverter {
             }
         }
 
-        OntClass modelInfoCls = model.createClass(JenaConstants.CDL_INFO_MODEL);
-        Individual modelInfo = model.createIndividual(JenaConstants.CDL_INFO_MODEL + "_"
+        OntClass modelInfoCls = model.createClass(JenaConstants.CDL_MODEL);
+        Individual modelInfo = model.createIndividual(JenaConstants.CDL_MODEL + "_"
                 + instance.getClass().getSimpleName(), modelInfoCls);
 
-        AnnotationProperty annoProp = model.createAnnotationProperty(JenaConstants.CDL_HAS_INFO_MODEL);
+        AnnotationProperty annoProp = model.createAnnotationProperty(JenaConstants.CDL_HAS_MODEL);
         annoProp.setRange(modelInfoCls);
         modelCls.addProperty(annoProp, modelInfo);
 
-        DatatypeProperty modelTypeProp = model.createDatatypeProperty(JenaConstants.CDL_NAMESPACE
-                + JenaConstants.MODEL_TYPE);
+        DatatypeProperty modelTypeProp = model.createDatatypeProperty(JenaConstants.CDL_MODEL_TYPE);
         modelTypeProp.addDomain(modelInfoCls);
         modelTypeProp.addRange(XSD.xstring);
         modelInfo.addProperty(modelTypeProp, instance.retrieveModelName());
 
-        DatatypeProperty modelVersionProp = model.createDatatypeProperty(JenaConstants.CDL_NAMESPACE
-                + JenaConstants.MODEL_TYPE_VERSION);
+        DatatypeProperty modelVersionProp = model.createDatatypeProperty(JenaConstants.CDL_MODEL_TYPE_VERSION);
         modelVersionProp.addDomain(modelInfoCls);
         modelVersionProp.addRange(XSD.xstring);
         modelInfo.addProperty(modelVersionProp, instance.retrieveModelVersion());
