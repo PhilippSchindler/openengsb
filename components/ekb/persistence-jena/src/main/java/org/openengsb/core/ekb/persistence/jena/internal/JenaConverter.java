@@ -21,7 +21,6 @@ import org.openengsb.core.ekb.persistence.jena.internal.api.OwlHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hp.hpl.jena.ontology.AnnotationProperty;
 import com.hp.hpl.jena.ontology.DatatypeProperty;
 import com.hp.hpl.jena.ontology.Individual;
 import com.hp.hpl.jena.ontology.ObjectProperty;
@@ -30,7 +29,9 @@ import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.vocabulary.XSD;
 
 public class JenaConverter {
@@ -57,12 +58,12 @@ public class JenaConverter {
         result.setDomainId(information.getDomainId());
         result.setInstanceId(information.getInstanceId());
 
-        OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_DL_MEM, result.getCommitGraph());
+        OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_DL_MEM, result.getDataGraph());
         model.setNsPrefix("", JenaConstants.CDL_NAMESPACE);
 
         result.getInserts().addAll(convertModelsToJenaResources(model, commit.getInserts()));
         result.getUpdates().addAll(convertModelsToJenaResources(model, commit.getUpdates()));
-        result.getDeletes().addAll(convertCommitDeletes(commit.getDeletes()));
+        result.getDeletes().addAll(convertCommitDeletes(model, commit.getDeletes()));
 
         LOGGER.info("OntoConverter done converting commit: " + result.getRevision());
         // TODO: test purpose only
@@ -71,8 +72,8 @@ public class JenaConverter {
         return result;
     }
 
-    public List<String> convertCommitDeletes(List<OpenEngSBModel> deletes) {
-        List<String> delList = new ArrayList<String>();
+    public List<RDFNode> convertCommitDeletes(OntModel model, List<OpenEngSBModel> deletes) {
+        List<RDFNode> delList = new ArrayList<RDFNode>();
 
         if (deletes != null && !deletes.isEmpty()) {
             Iterator<OpenEngSBModel> iter = deletes.iterator();
@@ -80,7 +81,8 @@ public class JenaConverter {
             while (iter.hasNext()) {
                 OpenEngSBModel instance = iter.next();
                 String oid = ModelWrapper.wrap(instance).getCompleteModelOID();
-                delList.add(oid);
+                RDFNode node = ResourceFactory.createPlainLiteral(oid);
+                delList.add(node);
             }
         }
 
@@ -255,13 +257,10 @@ public class JenaConverter {
         Individual modelInfo = model.createIndividual(JenaConstants.CDL_MODEL + "_"
                 + instance.getClass().getSimpleName(), modelInfoCls);
 
-        AnnotationProperty annoProp = model.createAnnotationProperty(JenaConstants.CDL_HAS_MODEL);
-        annoProp.setRange(modelInfoCls);
-        modelCls.addProperty(annoProp, modelInfo);
+        Property modelProperty = model.createProperty(JenaConstants.CDL_HAS_MODEL);
+        object.addProperty(modelProperty, modelInfo);
 
         DatatypeProperty modelTypeProp = model.createDatatypeProperty(JenaConstants.CDL_MODEL_TYPE);
-        modelTypeProp.addDomain(modelInfoCls);
-        modelTypeProp.addRange(XSD.xstring);
         modelInfo.addProperty(modelTypeProp, instance.retrieveModelName());
 
         DatatypeProperty modelVersionProp = model.createDatatypeProperty(JenaConstants.CDL_MODEL_TYPE_VERSION);

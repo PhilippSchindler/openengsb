@@ -9,18 +9,22 @@ import org.openengsb.core.ekb.persistence.jena.internal.api.OntoException;
 
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.rdf.model.StmtIterator;
 
 public class JenaCommit {
     private final Model dataGraph;
 
-    private final List<Resource> inserts;
-    private final List<Resource> updates;
-    private final List<String> deletes;
+    private final List<RDFNode> inserts;
+    private final List<RDFNode> updates;
+    private final List<RDFNode> deletes;
 
-    private final String committer;
-    private final String context;
-    private final UUID revision;
+    private String committer;
+    private String context;
+    private UUID revision;
 
     private Boolean committed = false;
     private Calendar timestamp;
@@ -43,27 +47,172 @@ public class JenaCommit {
         this.committer = committer;
         this.context = contextId;
 
-        inserts = new ArrayList<Resource>();
-        updates = new ArrayList<Resource>();
-        deletes = new ArrayList<String>();
+        inserts = new ArrayList<RDFNode>();
+        updates = new ArrayList<RDFNode>();
+        deletes = new ArrayList<RDFNode>();
 
         this.revision = UUID.randomUUID();
     }
 
-    public void insert(Resource obj) throws OntoException {
+    protected JenaCommit() {
+        dataGraph = ModelFactory.createDefaultModel();
+        inserts = new ArrayList<RDFNode>();
+        updates = new ArrayList<RDFNode>();
+        deletes = new ArrayList<RDFNode>();
+    }
+
+    /**
+     * TODO
+     * 
+     * @param commitRes
+     */
+    protected JenaCommit(Resource commitRes) {
+        Model temp = commitRes.getModel();
+        dataGraph = ModelFactory.createDefaultModel();
+
+        iterativeAdd(dataGraph, commitRes);
+
+        inserts = new ArrayList<RDFNode>();
+        updates = new ArrayList<RDFNode>();
+        deletes = new ArrayList<RDFNode>();
+
+        Property insProp = temp.getProperty(JenaConstants.CDL_COMMIT_INSERTS);
+        Property updProp = temp.getProperty(JenaConstants.CDL_COMMIT_UPDATES);
+        Property delProp = temp.getProperty(JenaConstants.CDL_COMMIT_DELETES);
+
+        List<RDFNode> insertNodes = dataGraph.listObjectsOfProperty(insProp).toList();
+        List<RDFNode> updateNodes = dataGraph.listObjectsOfProperty(updProp).toList();
+        List<RDFNode> deleteNodes = dataGraph.listObjectsOfProperty(delProp).toList();
+
+        inserts.addAll(insertNodes);
+        updates.addAll(updateNodes);
+        deletes.addAll(deleteNodes);
+
+        /**
+         * should use the RDFVisitor
+         */
+        // Property committerProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_COMMITTER);
+        // if((String data = dataGraph.getProperty(commitRes,
+        // committerProp).getObject()) != null) {
+        // this.committer = dataGraph.getProperty(commitRes,
+        // committerProp).getObject().asLiteral().getString();
+        // }
+        //
+        // Property contextProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_CONTEXT);
+        // this.context = dataGraph.getProperty(commitRes,
+        // contextProp).getObject().asLiteral().getString();
+        //
+        // Property revisionProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_REVISION);
+        // String rev = dataGraph.getProperty(commitRes,
+        // revisionProp).getObject().asLiteral().getString();
+        // this.revision = UUID.fromString(rev);
+        //
+        // Property timeStampProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_TIMESTAMP);
+        // // String rev = dataGraph.getProperty(commitRes,
+        // // revisionProp).getObject().;
+        // // this.revision = UUID.fromString(rev);
+        //
+        // Property commentProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_COMMENT);
+        // this.comment = dataGraph.getProperty(commitRes,
+        // commentProp).getObject().asLiteral().getString();
+        //
+        // Property parentProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_PARENT_REVISION);
+        // String parentRev = dataGraph.getProperty(commitRes,
+        // parentProp).getObject().asLiteral().getString();
+        // this.revision = UUID.fromString(parentRev);
+        //
+        // Property childProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_CHILD_REVISION);
+        // String childRev = dataGraph.getProperty(commitRes,
+        // childProp).getObject().asLiteral().getString();
+        // if(this.revision = UUID.fromString(childRev);
+        //
+        // Property domainProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_DOMAIN_ID);
+        // Property connectorProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_CONNECTOR_ID);
+        // Property instanceProp =
+        // temp.getProperty(JenaConstants.CDL_COMMIT_INSTANCE_ID);
+
+    }
+
+    // TODO:
+    private String getStringValue(Model model, Resource resource, String link) {
+        Property prop = model.getProperty(link);
+        model.listObjectsOfProperty(resource, prop);
+
+        return link;
+    }
+
+    private void iterativeAdd(Model model, Resource commitRes) {
+        Model temp = commitRes.getModel();
+        StmtIterator iter = temp.listStatements(commitRes, null, (RDFNode) null);
+        model.add(iter.toList());
+        while (iter.hasNext()) {
+            Statement stmt = iter.next();
+            RDFNode node = stmt.getObject();
+            if (node.isResource()) {
+                iterativeAdd(model, node.asResource());
+            }
+        }
+    }
+
+    public void insert(RDFNode obj) throws OntoException {
         inserts.add(obj);
     }
 
-    public void update(Resource obj) throws OntoException {
+    public void update(RDFNode obj) throws OntoException {
         updates.add(obj);
     }
 
-    public void delete(String oid) throws OntoException {
+    public void delete(RDFNode oid) throws OntoException {
         deletes.add(oid);
     }
 
-    public Boolean getCommitted() {
-        return committed;
+    public Model getDataGraph() {
+        return dataGraph;
+    }
+
+    public List<RDFNode> getInserts() {
+        return inserts;
+    }
+
+    public List<RDFNode> getUpdates() {
+        return updates;
+    }
+
+    public List<RDFNode> getDeletes() {
+        return deletes;
+    }
+
+    public String getCommitter() {
+        return committer;
+    }
+
+    public void setCommitter(String committer) {
+        this.committer = committer;
+    }
+
+    public String getContext() {
+        return context;
+    }
+
+    public void setContext(String context) {
+        this.context = context;
+    }
+
+    public UUID getRevision() {
+        return revision;
+    }
+
+    public void setRevision(UUID revision) {
+        this.revision = revision;
     }
 
     public void setCommitted(Boolean committed) {
@@ -126,32 +275,8 @@ public class JenaCommit {
         this.instanceId = instanceId;
     }
 
-    public Model getCommitGraph() {
-        return dataGraph;
-    }
-
-    public List<Resource> getInserts() {
-        return inserts;
-    }
-
-    public List<Resource> getUpdates() {
-        return updates;
-    }
-
-    public List<String> getDeletes() {
-        return deletes;
-    }
-
-    public String getCommitter() {
-        return committer;
-    }
-
-    public String getContext() {
-        return context;
-    }
-
-    public UUID getRevision() {
-        return revision;
+    public Boolean getCommitted() {
+        return committed;
     }
 
 }

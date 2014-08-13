@@ -16,6 +16,11 @@ public class JenaSnapshot extends JenaCommit {
         this.entities = new ArrayList<Resource>();
     }
 
+    public JenaSnapshot() {
+        super();
+        this.entities = new ArrayList<Resource>();
+    }
+
     /**
      * get list of unchanged resource.
      * 

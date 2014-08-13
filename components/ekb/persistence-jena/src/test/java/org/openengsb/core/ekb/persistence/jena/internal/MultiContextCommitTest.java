@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.Before;
@@ -191,5 +192,9 @@ public class MultiContextCommitTest {
 
         service.commit(createTestInsert3());
         service.commit(createTestInsert4());
+        UUID lastRevisionID = service.getLastRevisionId();
+        service.deleteCommit(lastRevisionID);
+        lastRevisionID = service.getLastRevisionId();
+        service.deleteCommit(lastRevisionID);
     }
 }
