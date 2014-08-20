@@ -75,7 +75,7 @@
     <module>components/ekb/persistence-query-edb</module>
     <module>components/ekb/transformation-wonderland</module>
     <module>components/ekb/persistence-persist-edb</module>
-    <module>components/ekb/persistence-onto</module>
+    <module>components/ekb/persistence-jena</module>
     <module>components/persistence</module>
     <module>components/services</module>
     <module>components/usersync</module>

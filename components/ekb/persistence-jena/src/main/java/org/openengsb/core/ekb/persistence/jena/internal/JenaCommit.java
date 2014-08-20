@@ -1,22 +1,28 @@
 package org.openengsb.core.ekb.persistence.jena.internal;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
 
+import jline.internal.Log;
+
 import org.openengsb.core.ekb.persistence.jena.internal.api.OntoException;
+import org.openengsb.core.ekb.persistence.jena.internal.api.OwlHelper;
 
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
+import com.hp.hpl.jena.rdf.model.RDFVisitor;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 
 public class JenaCommit {
-    private final Model dataGraph;
+    protected final Model dataGraph;
 
     private final List<RDFNode> inserts;
     private final List<RDFNode> updates;
@@ -25,6 +31,8 @@ public class JenaCommit {
     private String committer;
     private String context;
     private UUID revision;
+
+    private final RDFVisitor jv = new JenaVisitor();
 
     private Boolean committed = false;
     private Calendar timestamp;
@@ -54,23 +62,14 @@ public class JenaCommit {
         this.revision = UUID.randomUUID();
     }
 
-    protected JenaCommit() {
-        dataGraph = ModelFactory.createDefaultModel();
-        inserts = new ArrayList<RDFNode>();
-        updates = new ArrayList<RDFNode>();
-        deletes = new ArrayList<RDFNode>();
-    }
-
-    /**
-     * TODO
-     * 
-     * @param commitRes
-     */
     protected JenaCommit(Resource commitRes) {
         Model temp = commitRes.getModel();
+        OwlHelper.save(temp, "src/test/resources/test-jenacommit.owl");
         dataGraph = ModelFactory.createDefaultModel();
+        dataGraph.setNsPrefixes(temp.getNsPrefixMap());
 
         iterativeAdd(dataGraph, commitRes);
+        OwlHelper.save(dataGraph, "src/test/resources/test-iterativeAdd.owl");
 
         inserts = new ArrayList<RDFNode>();
         updates = new ArrayList<RDFNode>();
@@ -88,77 +87,57 @@ public class JenaCommit {
         updates.addAll(updateNodes);
         deletes.addAll(deleteNodes);
 
-        /**
-         * should use the RDFVisitor
-         */
-        // Property committerProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_COMMITTER);
-        // if((String data = dataGraph.getProperty(commitRes,
-        // committerProp).getObject()) != null) {
-        // this.committer = dataGraph.getProperty(commitRes,
-        // committerProp).getObject().asLiteral().getString();
-        // }
-        //
-        // Property contextProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_CONTEXT);
-        // this.context = dataGraph.getProperty(commitRes,
-        // contextProp).getObject().asLiteral().getString();
-        //
-        // Property revisionProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_REVISION);
-        // String rev = dataGraph.getProperty(commitRes,
-        // revisionProp).getObject().asLiteral().getString();
-        // this.revision = UUID.fromString(rev);
-        //
-        // Property timeStampProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_TIMESTAMP);
-        // // String rev = dataGraph.getProperty(commitRes,
-        // // revisionProp).getObject().;
-        // // this.revision = UUID.fromString(rev);
-        //
-        // Property commentProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_COMMENT);
-        // this.comment = dataGraph.getProperty(commitRes,
-        // commentProp).getObject().asLiteral().getString();
-        //
-        // Property parentProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_PARENT_REVISION);
-        // String parentRev = dataGraph.getProperty(commitRes,
-        // parentProp).getObject().asLiteral().getString();
-        // this.revision = UUID.fromString(parentRev);
-        //
-        // Property childProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_CHILD_REVISION);
-        // String childRev = dataGraph.getProperty(commitRes,
-        // childProp).getObject().asLiteral().getString();
-        // if(this.revision = UUID.fromString(childRev);
-        //
-        // Property domainProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_DOMAIN_ID);
-        // Property connectorProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_CONNECTOR_ID);
-        // Property instanceProp =
-        // temp.getProperty(JenaConstants.CDL_COMMIT_INSTANCE_ID);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_COMMITTER, "Committer", String.class);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_CONTEXT, "Context", String.class);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_REVISION, "Revision", UUID.class);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_TIMESTAMP, "Timestamp", Calendar.class);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_COMMENT, "Comment", String.class);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_PARENT_REVISION, "ParentRevision", UUID.class);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_CHILD_REVISION, "ChildRevision", UUID.class);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_DOMAIN_ID, "DomainId", String.class);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_CONNECTOR_ID, "ConnectorId", String.class);
+        setProperty(commitRes, JenaConstants.CDL_COMMIT_INSTANCE_ID, "InstanceId", String.class);
 
     }
 
-    // TODO:
-    private String getStringValue(Model model, Resource resource, String link) {
-        Property prop = model.getProperty(link);
-        model.listObjectsOfProperty(resource, prop);
+    public void setProperty(Resource commitRes, String propName, String property, Class<?> clazz) {
+        Property prop = dataGraph.getProperty(propName);
+        Statement stmt = commitRes.getProperty(prop);
+        if (stmt != null) {
+            RDFNode node = stmt.getObject();
+            if (node != null) {
+                Object obj = node.visitWith(jv);
+                if (propName.equals(JenaConstants.CDL_COMMIT_PARENT_REVISION)
+                        || propName.equals(JenaConstants.CDL_COMMIT_CHILD_REVISION)
+                        || propName.equals(JenaConstants.CDL_COMMIT_REVISION)) {
+                    obj = UUID.fromString((String) obj);
+                }
+                String methodName = "set" + property; // fieldName
+                try {
+                    Method m = JenaCommit.class.getMethod(methodName, clazz);
+                    m.invoke(this, obj);
+                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+                    Log.info("Fault in Reflection: setMethod is not correct", e);
+                } catch (NoSuchMethodException nsme) {
+                    Log.info("Fault in Reflection: there is no such method", nsme);
+                }
 
-        return link;
+                Log.info("setProperty: " + obj);
+            }
+        }
     }
 
     private void iterativeAdd(Model model, Resource commitRes) {
         Model temp = commitRes.getModel();
         StmtIterator iter = temp.listStatements(commitRes, null, (RDFNode) null);
-        model.add(iter.toList());
         while (iter.hasNext()) {
             Statement stmt = iter.next();
-            RDFNode node = stmt.getObject();
-            if (node.isResource()) {
-                iterativeAdd(model, node.asResource());
+            if (!model.contains(stmt)) {
+                model.add(stmt);
+                RDFNode node = stmt.getObject();
+                if (node.isResource()) {
+                    iterativeAdd(model, node.asResource());
+                }
             }
         }
     }

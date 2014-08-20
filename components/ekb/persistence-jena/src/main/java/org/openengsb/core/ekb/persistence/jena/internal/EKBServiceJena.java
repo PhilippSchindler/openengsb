@@ -17,8 +17,6 @@ import org.openengsb.core.ekb.api.hooks.EKBErrorHook;
 import org.openengsb.core.ekb.api.hooks.EKBPostCommitHook;
 import org.openengsb.core.ekb.api.hooks.EKBPreCommitHook;
 import org.openengsb.core.ekb.persistence.jena.internal.api.OntoService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Objects;
 
@@ -27,7 +25,8 @@ import com.google.common.base.Objects;
  * 
  */
 public class EKBServiceJena implements EKBService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(EKBServiceJena.class);
+    // private static final Logger LOGGER =
+    // LoggerFactory.getLogger(EKBServiceJena.class);
 
     private final OntoService jenaService;
     private final JenaConverter ontoConverter;
@@ -48,9 +47,9 @@ public class EKBServiceJena implements EKBService {
 
     @Override
     public void commit(EKBCommit ekbCommit) {
-        LOGGER.debug("Commit of models was called");
+        Log.debug("Commit of models was called");
         runPersistingLogic(ekbCommit, null, false);
-        LOGGER.debug("Commit of models was successful");
+        Log.debug("Commit of models was successful");
     }
 
     /**
@@ -69,8 +68,6 @@ public class EKBServiceJena implements EKBService {
         runEKBPreCommitHooks(commit);
         EKBException exception = null;
         JenaCommit converted = ontoConverter.convertEKBCommit(commit, authContext);
-        Log.info("Commit: " + commit);
-        Log.info("Converted: " + converted);
         try {
             performPersisting(converted, commit);
             runEKBPostCommitHooks(commit);
@@ -87,7 +84,6 @@ public class EKBServiceJena implements EKBService {
         try {
             Log.info("performPersisting: " + commit);
             jenaService.commit(commit);
-            Log.info("performPersisting: " + commit);
             source.setRevisionNumber(commit.getRevision());
             source.setParentRevisionNumber(commit.getParentRevision());
         } catch (Exception e) {
@@ -117,7 +113,7 @@ public class EKBServiceJena implements EKBService {
             } catch (EKBException e) {
                 throw new EKBException("EDBException is thrown in a pre commit hook.", e);
             } catch (Exception e) {
-                LOGGER.warn("An exception is thrown in a EKB pre commit hook.", e);
+                Log.warn("An exception is thrown in a EKB pre commit hook.", e);
             }
         }
     }
@@ -130,7 +126,7 @@ public class EKBServiceJena implements EKBService {
             try {
                 hook.onPostCommit(commit);
             } catch (Exception e) {
-                LOGGER.warn("An exception is thrown in a EKB post commit hook.", e);
+                Log.warn("An exception is thrown in a EKB post commit hook.", e);
             }
         }
     }
@@ -149,9 +145,9 @@ public class EKBServiceJena implements EKBService {
 
     @Override
     public void commit(EKBCommit ekbCommit, UUID headRevision) {
-        LOGGER.debug("Commit of models was called");
+        Log.debug("Commit of models was called");
         runPersistingLogic(ekbCommit, headRevision, true);
-        LOGGER.debug("Commit of models was successful");
+        Log.debug("Commit of models was successful");
     }
 
     @Override
@@ -195,8 +191,7 @@ public class EKBServiceJena implements EKBService {
 
     @Override
     public EKBCommit loadCommit(UUID revision) {
-        // TODO Auto-generated method stub
-        return null;
+        return jenaService.loadCommit(revision);
     }
 
     @Override

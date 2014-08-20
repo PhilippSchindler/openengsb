@@ -1,23 +1,53 @@
 package org.openengsb.core.ekb.persistence.jena.internal;
 
+import java.beans.BeanInfo;
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.OutputStream;
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import jline.internal.Log;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.ClassUtils;
 import org.apache.jena.riot.RDFDataMgr;
 import org.openengsb.core.api.context.ContextHolder;
+import org.openengsb.core.api.model.FileWrapper;
+import org.openengsb.core.api.model.ModelDescription;
+import org.openengsb.core.api.model.OpenEngSBModel;
+import org.openengsb.core.api.model.OpenEngSBModelEntry;
+import org.openengsb.core.ekb.api.EKBCommit;
 import org.openengsb.core.ekb.api.ModelRegistry;
 import org.openengsb.core.ekb.persistence.jena.internal.api.OntoService;
 import org.openengsb.core.ekb.persistence.jena.internal.api.OwlHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.openengsb.core.util.ModelUtils;
 
+import com.google.common.collect.Lists;
 import com.hp.hpl.jena.ontology.DatatypeProperty;
 import com.hp.hpl.jena.ontology.Individual;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.ontology.OntResource;
 import com.hp.hpl.jena.query.Dataset;
+import com.hp.hpl.jena.query.ParameterizedSparqlString;
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.ReadWrite;
+import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.query.ResultSetFormatter;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.NodeIterator;
@@ -26,12 +56,13 @@ import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.shared.JenaException;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.util.iterator.Filter;
 
 public class JenaService implements OntoService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(JenaService.class);
+    public static final String REFERENCE_PREFIX = "refersTo_";
 
     private final Dataset dataset;
     private final Model defaultModel;
@@ -46,7 +77,7 @@ public class JenaService implements OntoService {
      * @param isReset whether the existing data have to be reset.
      */
     public JenaService(Dataset dataset, Model defaultModel, Boolean isReset) {
-        LOGGER.info("Initialize OntoService Dataset");
+        Log.info("Initialize OntoService Dataset");
         if (defaultModel != null) {
             this.defaultModel = defaultModel;
         } else {
@@ -55,7 +86,7 @@ public class JenaService implements OntoService {
         this.dataset = dataset;
         if (isReset) {
             resetDataset();
-            LOGGER.info("Reset OntoService Dataset");
+            Log.info("Reset OntoService Dataset");
         }
     }
 
@@ -93,7 +124,7 @@ public class JenaService implements OntoService {
             UUID revUUID = UUID.fromString(commit.getLocalName());
             System.out.println(revUUID);
             if (!revUUID.equals(headRevision)) {
-                LOGGER.info("The head revision is not the same with the latest revision");
+                Log.info("The head revision is not the same with the latest revision");
                 return;
             }
         }
@@ -140,8 +171,12 @@ public class JenaService implements OntoService {
         String context = ContextHolder.get().getCurrentContextId();
         Resource contextRes = model.getResource(JenaConstants.CDL_NAMESPACE + context);
         Property contextHead = model.getProperty(JenaConstants.CDL_CONTEXT_HEAD_COMMIT);
-        Resource revision = model.getProperty(contextRes, contextHead).getObject().asResource();
-        UUID revUUID = UUID.fromString(revision.getLocalName());
+        Resource commit = model.getProperty(contextRes, contextHead).getObject().asResource();
+        Property commitRev = model.getProperty(JenaConstants.CDL_COMMIT_REVISION);
+        RDFNode node = commit.getProperty(commitRev).getObject();
+        String revisionId = node.asLiteral().getString();
+
+        UUID revUUID = UUID.fromString(revisionId);
         dataset.end();
 
         return revUUID;
@@ -149,23 +184,41 @@ public class JenaService implements OntoService {
 
     @Override
     public Object executeQuery(String string, String contextId) {
+        dataset.begin(ReadWrite.READ);
 
-        // TODO
-        return null;
+        Model model = dataset.getDefaultModel();
+        ParameterizedSparqlString query = new ParameterizedSparqlString(string);
+        query.setNsPrefixes(model.getNsPrefixMap());
+        QueryExecution qe = QueryExecutionFactory.create(query.toString(), model);
+        ResultSet rs = qe.execSelect();
+        OutputStream os = new ByteArrayOutputStream();
+        ResultSetFormatter.outputAsJSON(os, rs);
+        qe.close();
+
+        dataset.end();
+
+        return os;
     }
 
     @Override
     public UUID getLastRevisionNumberOfContext(String contextId) {
+        UUID uuid = null;
         dataset.begin(ReadWrite.READ);
 
         Model model = dataset.getDefaultModel();
         Resource contextRes = model.getResource(JenaConstants.CDL_NAMESPACE + contextId);
-        Property contextHead = model.getProperty(JenaConstants.CDL_CONTEXT_HEAD_COMMIT);
-        RDFNode revision = model.getProperty(contextRes, contextHead).getObject();
-        UUID revUUID = UUID.fromString(revision.asLiteral().getString());
+        if (contextRes != null) {
+            Property contextHead = model.getProperty(JenaConstants.CDL_CONTEXT_HEAD_COMMIT);
+            Statement stmt = model.getProperty(contextRes, contextHead);
+            if (stmt == null) {
+                RDFNode revision = model.getProperty(contextRes, contextHead).getObject();
+                uuid = UUID.fromString(revision.asLiteral().getString());
+            }
+        }
+
         dataset.end();
 
-        return revUUID;
+        return uuid;
     }
 
     @Override
@@ -320,15 +373,24 @@ public class JenaService implements OntoService {
         }
     }
 
-    public JenaSnapshot loadCommit(UUID commitID) {
-        JenaSnapshot snapshot = null;
+    @Override
+    public EKBCommit loadCommit(UUID commitID) {
+        JenaCommit snapshot = loadJenaCommit(commitID);
+        EKBCommit commit = loadCommitFromSnapshot(snapshot);
+
+        return commit;
+    }
+
+    public JenaCommit loadJenaCommit(UUID commitID) {
+        JenaCommit snapshot = null;
 
         dataset.begin(ReadWrite.READ);
         Model model = dataset.getDefaultModel();
+        String URI = JenaConstants.CDL_NAMESPACE + commitID;
 
-        Resource commitInstance = model.getResource(JenaConstants.CDL_NAMESPACE + commitID);
+        Resource commitInstance = model.getResource(URI);
         if (model.containsResource(commitInstance)) {
-            createSnapshot(commitInstance);
+            snapshot = new JenaCommit(commitInstance);
         }
 
         dataset.end();
@@ -336,100 +398,292 @@ public class JenaService implements OntoService {
         return snapshot;
     }
 
-    private void createSnapshot(Resource commitInstance) {
-        Model model = commitInstance.getModel();
-        JenaSnapshot snapshot = new JenaSnapshot();
+    public EKBCommit loadCommitFromSnapshot(JenaCommit commit) {
 
+        System.out.println(commit);
+
+        EKBCommit result = new EKBCommit();
+        Map<ModelDescription, Class<?>> cache = new HashMap<>();
+
+        result.setRevisionNumber(commit.getRevision());
+        result.setParentRevisionNumber(commit.getParentRevision());
+        result.setComment((commit.getComment() != null) ? commit.getComment() : "");
+        result.setDomainId((commit.getDomainId() != null) ? commit.getDomainId() : "");
+        result.setConnectorId((commit.getConnectorId() != null) ? commit.getConnectorId() : "");
+        result.setInstanceId((commit.getInstanceId() != null) ? commit.getInstanceId() : "");
+
+        for (RDFNode insert : commit.getInserts()) {
+            result.addInsert(createModelOfResource(insert, cache));
+        }
+        for (RDFNode update : commit.getUpdates()) {
+            result.addUpdate(createModelOfResource(update, cache));
+        }
+        for (RDFNode delete : commit.getDeletes()) {
+            dataset.begin(ReadWrite.READ);
+
+            Model model = dataset.getDefaultModel();
+            Resource commitRes = model.getResource(JenaConstants.CDL_NAMESPACE + commit.getRevision());
+            Property deleteList = model.getProperty(JenaConstants.CDL_COMMIT_DELETES);
+            Property oid = model.getProperty(JenaConstants.CDL_OID);
+            ExtendedIterator<Statement> deleteListIter = commitRes.listProperties(deleteList);
+            Statement stmt = deleteListIter.filterKeep(new JenaOidFilter(oid, delete)).next();
+
+            if (stmt != null && stmt.getObject().isResource()) {
+                Resource object = stmt.getObject().asResource();
+                result.addDelete(createModelOfResource(object, cache));
+            }
+
+            dataset.end();
+        }
+
+        return result;
     }
 
-    // public EKBCommit loadCommit(JenaCommit commit) {
-    //
-    // EKBCommit result = new EKBCommit();
-    // Map<ModelDescription, Class<?>> cache = new HashMap<>();
-    //
-    // result.setRevisionNumber(commit.getRevision());
-    // result.setComment(commit.getComment());
-    // result.setParentRevisionNumber(commit.getParentRevision());
-    // result.setDomainId(commit.getDomainId());
-    // result.setConnectorId(commit.getConnectorId());
-    // result.setInstanceId(commit.getInstanceId());
-    //
-    // for (Resource insert : commit.getInserts()) {
-    // result.addInsert(createModelOfResource(insert, cache));
-    // }
-    // for (Resource update : commit.getUpdates()) {
-    // result.addUpdate(createModelOfResource(update, cache));
-    // }
-    // for (String delete : commit.getDeletes()) {
-    // dataset.begin(ReadWrite.READ);
-    //
-    // Model model = dataset.getDefaultModel();
-    // Resource commitRes = model.getResource(JenaConstants.CDL_NAMESPACE +
-    // commit.getRevision());
-    // Property deleteList =
-    // model.getProperty(JenaConstants.CDL_COMMIT_DELETES);
-    // Property oid = model.getProperty(JenaConstants.CDL_OID);
-    // ExtendedIterator<Statement> deleteListIter =
-    // commitRes.listProperties(deleteList);
-    // Statement stmt = deleteListIter.filterKeep(new JenaOidFilter(oid,
-    // delete)).next();
-    //
-    // if (stmt != null && stmt.getObject().isResource()) {
-    // Resource object = stmt.getObject().asResource();
-    // result.addDelete(createModelOfResource(object, cache));
-    // }
-    //
-    // dataset.end();
-    // }
-    //
-    // return result;
-    // }
-    //
-    // private Object createModelOfResource(Resource object,
-    // Map<ModelDescription, Class<?>> cache) {
-    // try {
-    // ModelDescription description = getDescriptionFromObject(object);
-    // Class<?> modelClass;
-    // if (cache.containsKey(description)) {
-    // modelClass = cache.get(description);
-    // } else {
-    // modelClass = modelRegistry.loadModel(description);
-    // cache.put(description, modelClass);
-    // }
-    // return convertResourceToModel(modelClass, object);
-    // } catch (IllegalArgumentException | ClassNotFoundException e) {
-    // LOGGER.warn("Unable to create model of the object {}",
-    // object.getLocalName(), e);
-    // return null;
-    // }
-    // }
-    //
-    // private Object convertResourceToModel(Class<?> modelClass, Resource
-    // object) {
-    // // TODO Auto-generated method stub
-    // return null;
-    // }
-    //
-    // /**
-    // * Extracts the required values to lookup a model class from the given
-    // * EDBObject. If this object does not contain the required information, an
-    // * IllegalArgumentException is thrown.
-    // */
-    // private ModelDescription getDescriptionFromObject(Resource obj) {
-    // Property =
-    //
-    // // String modelName =
-    // // obj.getPropertyResourceValue(JenaConstants.CDL_MODEL_TYPE);
-    // // String modelVersion = obj.getString(EDBConstants.MODEL_TYPE_VERSION);
-    // // if (modelName == null || modelVersion == null) {
-    // // throw new IllegalArgumentException("The object " + obj.getOID() +
-    // // " contains no model information");
-    // // }
-    // // return new ModelDescription(modelName, modelVersion);
-    // return null;
-    // }
-    //
-    // public void setModelRegistry(ModelRegistry modelRegistry) {
-    // this.modelRegistry = modelRegistry;
-    // }
+    private Object createModelOfResource(RDFNode rdfNode, Map<ModelDescription, Class<?>> cache) {
+        try {
+            if (!rdfNode.isResource()) {
+                throw new JenaException();
+            }
+
+            Resource node = rdfNode.asResource();
+            ModelDescription description = getDescriptionFromObject(node);
+            Log.info("ModelDescription: " + description);
+            Class<?> modelClass;
+            if (cache.containsKey(description)) {
+                modelClass = cache.get(description);
+            } else {
+                modelClass = modelRegistry.loadModel(description);
+                cache.put(description, modelClass);
+            }
+            return convertResourceToModel(modelClass, node);
+        } catch (IllegalArgumentException | ClassNotFoundException e) {
+            Log.warn("Unable to create model of the object {} ", rdfNode.toString(), e);
+            return null;
+        } catch (JenaException e) {
+            Log.warn("Node {} is not a resource", rdfNode.toString(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Converts an Resource to a model by analyzing the object and trying to
+     * call the corresponding setters of the model.
+     */
+    private Object convertResourceToModel(Class<?> model, Resource object) {
+        // TODO: check if this function is necessary
+        // filterEngineeringObjectInformation(object, model);
+
+        List<OpenEngSBModelEntry> entries = new ArrayList<>();
+
+        for (PropertyDescriptor propertyDescriptor : getPropertyDescriptorsForClass(model)) {
+            if (propertyDescriptor.getWriteMethod() == null
+                    || propertyDescriptor.getName().equals(ModelUtils.MODEL_TAIL_FIELD_NAME)) {
+                continue;
+            }
+
+            Object value = getValueForProperty(propertyDescriptor, object);
+            Class<?> propertyClass = propertyDescriptor.getPropertyType();
+            if (propertyClass.isPrimitive()) {
+                entries.add(new OpenEngSBModelEntry(propertyDescriptor.getName(), value, ClassUtils
+                        .primitiveToWrapper(propertyClass)));
+            } else {
+                entries.add(new OpenEngSBModelEntry(propertyDescriptor.getName(), value, propertyClass));
+            }
+        }
+
+        // TODO: again, check whether this function is necessary
+        // for (Map.Entry<String, EDBObjectEntry> objectEntry :
+        // object.entrySet()) {
+        // EDBObjectEntry entry = objectEntry.getValue();
+        // Class<?> entryType;
+        // try {
+        // entryType = model.getClassLoader().loadClass(entry.getType());
+        // entries.add(new OpenEngSBModelEntry(entry.getKey(), entry.getValue(),
+        // entryType));
+        // } catch (ClassNotFoundException e) {
+        // Log.error("Unable to load class {} of the model tail",
+        // entry.getType());
+        // }
+        // }
+
+        return ModelUtils.createModel(model, entries);
+    }
+
+    /**
+     * Generate the value for a specific property of a model out of an
+     * EDBObject.
+     */
+    private Object getValueForProperty(PropertyDescriptor propertyDescriptor, Resource object) {
+        Model model = object.getModel();
+
+        Method setterMethod = propertyDescriptor.getWriteMethod();
+        String propertyName = propertyDescriptor.getName();
+
+        Property propertyObj = model.getProperty(JenaConstants.CDL_NAMESPACE + propertyName);
+        if (propertyObj == null)
+            return null;
+        Statement stmt = object.getProperty(propertyObj);
+        if (stmt == null)
+            return null;
+
+        Object value = stmt.getObject();
+        Class<?> parameterType = setterMethod.getParameterTypes()[0];
+
+        // TODO: Check whether supports for type Map is necessary
+        // series
+        // if (Map.class.isAssignableFrom(parameterType)) {
+        // List<Class<?>> classes = getGenericMapParameterClasses(setterMethod);
+        // value = getMapValue(classes.get(0), classes.get(1), propertyName,
+        // object);
+        // } else
+
+        if (List.class.isAssignableFrom(parameterType)) {
+            Class<?> clazz = getGenericListParameterClass(setterMethod);
+            value = getListValue(clazz, propertyName, object);
+        } else if (parameterType.isArray()) {
+            Class<?> clazz = parameterType.getComponentType();
+            value = getArrayValue(clazz, propertyName, object);
+        } else if (value == null) {
+            return null;
+        } else if (OpenEngSBModel.class.isAssignableFrom(parameterType)) {
+            RDFNode valueRDF = (RDFNode) value;
+            if (valueRDF.isResource()) {
+                value = convertResourceToModel(parameterType, valueRDF.asResource());
+            } else {
+                throw new JenaException("Type mismatch, should be Resource instead of Literal");
+            }
+        } else if (parameterType.equals(FileWrapper.class)) {
+            FileWrapper wrapper = new FileWrapper();
+            Property wrapperProperty = model.getProperty(JenaConstants.CDL_NAMESPACE + propertyName
+                    + JenaConverter.FILEWRAPPER_FILENAME_SUFFIX);
+            if (wrapperProperty == null)
+                return null;
+            Statement wrapperStmt = object.getProperty(wrapperProperty);
+            if (wrapperStmt == null || !wrapperStmt.getObject().isLiteral())
+                return null;
+
+            String filename = wrapperStmt.getObject().asLiteral().getString();
+
+            String content = (String) value;
+            wrapper.setFilename(filename);
+            wrapper.setContent(Base64.decodeBase64(content));
+            value = wrapper;
+        } else if (parameterType.equals(File.class)) {
+            return null;
+        } else {
+            value = ((RDFNode) value).visitWith(new JenaVisitor());
+        }
+
+        return value;
+    }
+
+    /**
+     * Gets an array object out of an EDBObject.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> T[] getArrayValue(Class<T> type, String propertyName, Resource object) {
+        List<T> elements = getListValue(type, propertyName, object);
+        T[] ar = (T[]) Array.newInstance(type, elements.size());
+        return elements.toArray(ar);
+    }
+
+    /**
+     * Gets a list object out of an EDBObject.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> List<T> getListValue(Class<T> type, String propertyName, Resource object) {
+        List<T> temp = new ArrayList<>();
+        Model m = object.getModel();
+
+        Property p = m.getProperty(JenaConstants.CDL_NAMESPACE + propertyName);
+        if (p == null)
+            return temp;
+        NodeIterator objs = m.listObjectsOfProperty(object, p);
+        while (objs.hasNext()) {
+            RDFNode node = objs.next();
+            if (node == null) {
+                break;
+            } else if (node.isResource()) {
+                Object obj = convertResourceToModel(type, node.asResource());
+                temp.add((T) obj);
+            } else if (node.isLiteral()) {
+                temp.add((T) node.asLiteral().getValue());
+            }
+        }
+        return temp;
+    }
+
+    /**
+     * Returns the entry name for a list element in the EDB format. E.g. the
+     * list element for the property "list" with the index 0 would be "list.0".
+     */
+    public static String getEntryNameForList(String property, Integer index) {
+        return String.format("%s.%d", property, index);
+    }
+
+    /**
+     * Get the type of the list parameter of a setter.
+     */
+    private Class<?> getGenericListParameterClass(Method setterMethod) {
+        return getGenericParameterClasses(setterMethod, 1).get(0);
+    }
+
+    /**
+     * Loads the generic parameter classes up to the given depth (1 for lists, 2
+     * for maps)
+     */
+    private List<Class<?>> getGenericParameterClasses(Method setterMethod, int depth) {
+        Type t = setterMethod.getGenericParameterTypes()[0];
+        ParameterizedType pType = (ParameterizedType) t;
+        List<Class<?>> classes = new ArrayList<>();
+        for (int i = 0; i < depth; i++) {
+            classes.add((Class<?>) pType.getActualTypeArguments()[i]);
+        }
+        return classes;
+    }
+
+    /**
+     * Returns all property descriptors for a given class.
+     */
+    private List<PropertyDescriptor> getPropertyDescriptorsForClass(Class<?> clasz) {
+        try {
+            BeanInfo beanInfo = Introspector.getBeanInfo(clasz);
+            return Arrays.asList(beanInfo.getPropertyDescriptors());
+        } catch (IntrospectionException e) {
+            Log.error("instantiation exception while trying to create instance of class {}", clasz.getName());
+        }
+        return Lists.newArrayList();
+    }
+
+    /**
+     * Extracts the required values to lookup a model class from the given
+     * EDBObject. If this object does not contain the required information, an
+     * IllegalArgumentException is thrown.
+     */
+    private ModelDescription getDescriptionFromObject(Resource obj) {
+        Model model = obj.getModel();
+
+        Property hasModel = model.getProperty(JenaConstants.CDL_HAS_MODEL);
+        Property modelType = model.getProperty(JenaConstants.CDL_MODEL_TYPE);
+        Property modelTypeVersion = model.getProperty(JenaConstants.CDL_MODEL_TYPE_VERSION);
+
+        Statement stmt = obj.getProperty(hasModel);
+        RDFNode object = stmt.getObject();
+        if (!object.isResource()) {
+            throw new JenaException("The object " + obj.getLocalName() + " do not contain model information");
+        }
+        Resource cdlModel = object.asResource();
+
+        String modelName = cdlModel.getProperty(modelType).getObject().asLiteral().getString();
+        String modelVersion = cdlModel.getProperty(modelTypeVersion).getObject().asLiteral().getString();
+
+        if (modelName == null || modelVersion == null) {
+            throw new IllegalArgumentException("The object " + obj.getLocalName() + " contains no model information");
+        }
+        return new ModelDescription(modelName, modelVersion);
+    }
+
+    public void setModelRegistry(ModelRegistry modelRegistry) {
+        this.modelRegistry = modelRegistry;
+    }
 }

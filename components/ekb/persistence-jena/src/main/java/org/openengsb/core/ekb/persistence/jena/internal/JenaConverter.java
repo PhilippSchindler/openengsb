@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base64;
@@ -207,34 +206,40 @@ public class JenaConverter {
 
                     object.addProperty(datatypeProp, (Resource) item);
                 }
-            } else if (Map.class.isAssignableFrom(entry.getType())) {
-                Map<?, ?> map = (Map<?, ?>) entry.getValue();
-                if (map == null || map.size() == 0) {
-                    continue;
-                }
-                Boolean keyIsModel = null;
-                Boolean valueIsModel = null;
-
-                for (Map.Entry<?, ?> ent : map.entrySet()) {
-                    if (keyIsModel == null) {
-                        keyIsModel = OpenEngSBModel.class.isAssignableFrom(ent.getKey().getClass());
-                    }
-                    if (valueIsModel == null) {
-                        valueIsModel = OpenEngSBModel.class.isAssignableFrom(ent.getValue().getClass());
-                    }
-                    Object key = ent.getKey();
-                    Object value = ent.getValue();
-                    if (keyIsModel) {
-                        key = convertSubModel((OpenEngSBModel) key, objects, model);
-                    }
-                    if (valueIsModel) {
-                        value = convertSubModel((OpenEngSBModel) value, objects, model);
-                    }
-                    object.addProperty(model.createProperty(JenaConstants.CDL_NAMESPACE + entry.getKey()),
-                            (Resource) key);
-                    object.addProperty(model.createProperty(JenaConstants.CDL_NAMESPACE + entry.getKey()),
-                            (Resource) value);
-                }
+                // TODO: revisit this later
+                // } else if (Map.class.isAssignableFrom(entry.getType())) {
+                // Map<?, ?> map = (Map<?, ?>) entry.getValue();
+                // if (map == null || map.size() == 0) {
+                // continue;
+                // }
+                // Boolean keyIsModel = null;
+                // Boolean valueIsModel = null;
+                //
+                // for (Map.Entry<?, ?> ent : map.entrySet()) {
+                // if (keyIsModel == null) {
+                // keyIsModel =
+                // OpenEngSBModel.class.isAssignableFrom(ent.getKey().getClass());
+                // }
+                // if (valueIsModel == null) {
+                // valueIsModel =
+                // OpenEngSBModel.class.isAssignableFrom(ent.getValue().getClass());
+                // }
+                // Object key = ent.getKey();
+                // Object value = ent.getValue();
+                // if (keyIsModel) {
+                // key = convertSubModel((OpenEngSBModel) key, objects, model);
+                // }
+                // if (valueIsModel) {
+                // value = convertSubModel((OpenEngSBModel) value, objects,
+                // model);
+                // }
+                // object.addProperty(model.createProperty(JenaConstants.CDL_NAMESPACE
+                // + entry.getKey()),
+                // (Resource) key);
+                // object.addProperty(model.createProperty(JenaConstants.CDL_NAMESPACE
+                // + entry.getKey()),
+                // (Resource) value);
+                // }
             } else {
                 // TODO: What type should be handled here?
                 DatatypeProperty datatypeProp = model.createDatatypeProperty(JenaConstants.CDL_NAMESPACE

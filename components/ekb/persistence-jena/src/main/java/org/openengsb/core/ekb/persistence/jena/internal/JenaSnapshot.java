@@ -5,20 +5,25 @@ import java.util.List;
 
 import org.openengsb.core.ekb.persistence.jena.internal.api.OntoException;
 
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 
 public class JenaSnapshot extends JenaCommit {
 
-    private final List<Resource> entities;
+    private final List<RDFNode> entities;
 
     public JenaSnapshot(String committer, String contextId) {
         super(committer, contextId);
-        this.entities = new ArrayList<Resource>();
+        this.entities = new ArrayList<RDFNode>();
     }
 
-    public JenaSnapshot() {
-        super();
-        this.entities = new ArrayList<Resource>();
+    public JenaSnapshot(Resource commitRes) {
+        super(commitRes);
+
+        Property entitiesProp = dataGraph.getProperty(JenaConstants.CDL_COMMIT_ENTITIES);
+        List<RDFNode> entityNodes = dataGraph.listObjectsOfProperty(entitiesProp).toList();
+        this.entities = new ArrayList<RDFNode>(entityNodes);
     }
 
     /**
@@ -26,7 +31,7 @@ public class JenaSnapshot extends JenaCommit {
      * 
      * @return unchanged resources.
      */
-    public List<Resource> getEntities() {
+    public List<RDFNode> getEntities() {
         return entities;
     }
 
