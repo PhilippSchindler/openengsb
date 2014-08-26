@@ -29,8 +29,12 @@ import org.openengsb.core.api.model.FileWrapper;
 import org.openengsb.core.api.model.ModelDescription;
 import org.openengsb.core.api.model.OpenEngSBModel;
 import org.openengsb.core.api.model.OpenEngSBModelEntry;
+import org.openengsb.core.api.model.QueryRequest;
 import org.openengsb.core.ekb.api.EKBCommit;
 import org.openengsb.core.ekb.api.ModelRegistry;
+import org.openengsb.core.ekb.api.Query;
+import org.openengsb.core.ekb.api.QueryFilter;
+import org.openengsb.core.ekb.api.QueryProjection;
 import org.openengsb.core.ekb.persistence.jena.internal.api.OntoService;
 import org.openengsb.core.ekb.persistence.jena.internal.api.OwlHelper;
 import org.openengsb.core.util.ModelUtils;
@@ -45,6 +49,7 @@ import com.hp.hpl.jena.query.Dataset;
 import com.hp.hpl.jena.query.ParameterizedSparqlString;
 import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.QuerySolution;
 import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.query.ResultSetFormatter;
@@ -65,7 +70,7 @@ public class JenaService implements OntoService {
     public static final String REFERENCE_PREFIX = "refersTo_";
 
     private final Dataset dataset;
-    private final Model defaultModel;
+    private final Model template;
     private ModelRegistry modelRegistry;
 
     /**
@@ -79,9 +84,9 @@ public class JenaService implements OntoService {
     public JenaService(Dataset dataset, Model defaultModel, Boolean isReset) {
         Log.info("Initialize OntoService Dataset");
         if (defaultModel != null) {
-            this.defaultModel = defaultModel;
+            this.template = defaultModel;
         } else {
-            this.defaultModel = RDFDataMgr.loadModel(JenaConstants.CDL_TEMPLATE);
+            this.template = RDFDataMgr.loadModel(JenaConstants.CDL_TEMPLATE);
         }
         this.dataset = dataset;
         if (isReset) {
@@ -103,8 +108,8 @@ public class JenaService implements OntoService {
         }
         Model model = dataset.getDefaultModel();
         model.removeAll();
-        model.add(defaultModel);
-        model.setNsPrefixes(defaultModel.getNsPrefixMap());
+        model.add(template);
+        model.setNsPrefixes(template.getNsPrefixMap());
 
         dataset.commit();
         dataset.end();
@@ -299,6 +304,7 @@ public class JenaService implements OntoService {
 
         if (commit.getUpdates() != null || !commit.getUpdates().isEmpty()) {
             Iterator<RDFNode> updates = commit.getUpdates().iterator();
+        	Log.info("Update-Remove1");
 
             while (updates.hasNext()) {
                 Resource update = updates.next().asResource();
@@ -307,17 +313,20 @@ public class JenaService implements OntoService {
                 Filter<Statement> filter = new JenaOidFilter(oid, stmt.getObject());
                 ExtendedIterator<Statement> iter = parentCommitInstance.listProperties(entityProperty).filterKeep(
                         filter);
+            	Log.info("Update-Remove2", update.getURI());
                 if (iter.hasNext()) {
                     // link to previous version of data & remove old object from
                     // the entity list
                     Resource oldObject = iter.next().getObject().asResource();
                     commitModel.add(update, provWasRevisionOf, oldObject);
-                    commitModel.remove(commitInstance, entityProperty, oldObject);
+                    ontModel.remove(commitInstance, entityProperty, oldObject);
+                	Log.info("Update-Remove3", oldObject.getURI());
                 }
 
                 commitModel.add(commitInstance, updateProperty, update);
                 commitModel.add(commitInstance, entityProperty, update);
             }
+            OwlHelper.save(commitModel, "src/test/resources/test-update.owl");
         }
 
         if (commit.getDeletes() != null || !commit.getDeletes().isEmpty()) {
@@ -333,7 +342,7 @@ public class JenaService implements OntoService {
                 if (iter.hasNext()) {
                     Resource dataToBeDeleted = iter.next().getSubject();
                     commitModel.add(commitInstance, deleteProperty, dataToBeDeleted);
-                    commitModel.remove(commitInstance, entityProperty, dataToBeDeleted);
+                    ontModel.remove(commitInstance, entityProperty, dataToBeDeleted);
                 }
             }
         }
@@ -455,7 +464,7 @@ public class JenaService implements OntoService {
                 modelClass = modelRegistry.loadModel(description);
                 cache.put(description, modelClass);
             }
-            return convertResourceToModel(modelClass, node);
+            return convertResourceToUncheckedModel(modelClass, node);
         } catch (IllegalArgumentException | ClassNotFoundException e) {
             Log.warn("Unable to create model of the object {} ", rdfNode.toString(), e);
             return null;
@@ -469,17 +478,20 @@ public class JenaService implements OntoService {
      * Converts an Resource to a model by analyzing the object and trying to
      * call the corresponding setters of the model.
      */
-    private Object convertResourceToModel(Class<?> model, Resource object) {
+    private Object convertResourceToUncheckedModel(Class<?> model, Resource object) {
         // TODO: check if this function is necessary
         // filterEngineeringObjectInformation(object, model);
 
         List<OpenEngSBModelEntry> entries = new ArrayList<>();
+		Log.info("convertResourceToUncheckedModel1");
 
         for (PropertyDescriptor propertyDescriptor : getPropertyDescriptorsForClass(model)) {
+    		Log.info("convertResourceToUncheckedModel2");
             if (propertyDescriptor.getWriteMethod() == null
                     || propertyDescriptor.getName().equals(ModelUtils.MODEL_TAIL_FIELD_NAME)) {
                 continue;
             }
+    		Log.info("convertResourceToUncheckedModel2.1");
 
             Object value = getValueForProperty(propertyDescriptor, object);
             Class<?> propertyClass = propertyDescriptor.getPropertyType();
@@ -548,7 +560,7 @@ public class JenaService implements OntoService {
         } else if (OpenEngSBModel.class.isAssignableFrom(parameterType)) {
             RDFNode valueRDF = (RDFNode) value;
             if (valueRDF.isResource()) {
-                value = convertResourceToModel(parameterType, valueRDF.asResource());
+                value = convertResourceToUncheckedModel(parameterType, valueRDF.asResource());
             } else {
                 throw new JenaException("Type mismatch, should be Resource instead of Literal");
             }
@@ -604,7 +616,7 @@ public class JenaService implements OntoService {
             if (node == null) {
                 break;
             } else if (node.isResource()) {
-                Object obj = convertResourceToModel(type, node.asResource());
+                Object obj = convertResourceToUncheckedModel(type, node.asResource());
                 temp.add((T) obj);
             } else if (node.isLiteral()) {
                 temp.add((T) node.asLiteral().getValue());
@@ -685,5 +697,81 @@ public class JenaService implements OntoService {
 
     public void setModelRegistry(ModelRegistry modelRegistry) {
         this.modelRegistry = modelRegistry;
+    }
+
+	@SuppressWarnings("unused")
+	@Override
+	public <T> List<T> query(Query query) {
+		List<T> res = new ArrayList<>();
+		Log.info("query1");
+		
+		List<Class<T>> classes = query.getJoinClasses();
+		QueryFilter q = query.getFilter();
+		List<QueryProjection> projections = query.getProjection();
+		Log.info("query1.1");
+		
+		if(q.getQueryFilterElement() instanceof QueryRequest && !classes.isEmpty()) {
+			Log.info("query2");
+			Class<T> cls = classes.get(0);
+			QueryRequest qr = (QueryRequest) q.getQueryFilterElement();
+			List<T> tempRes = singleModelQuery(cls, qr);
+			Log.info("query2.1");
+			if(tempRes != null) {
+				res.addAll(tempRes);
+			}
+		} else {
+			// TODO: handle other type of query
+		}
+		
+		return res;
+	}
+	
+	private <T> List<T> singleModelQuery(Class<T> oesbModel, QueryRequest qr) {
+        List<T> oesbModels = new ArrayList<>();
+		Log.info("singleModelQuery1");
+		
+		ParameterizedSparqlString str = JenaQueryRequestConverter.convertSimpleQueryRequest(qr, oesbModel);
+		
+		if(str!=null) {
+			Log.info("singleModelQuery2", str.toString());
+			
+			dataset.begin(ReadWrite.READ);
+			Model model = dataset.getDefaultModel();
+			OwlHelper.save(model, "src/test/resources/test-query.owl");
+			str.setNsPrefixes(model.getNsPrefixMap());
+			QueryExecution exec = QueryExecutionFactory.create(str.toString(), model);
+			ResultSet rs = exec.execSelect();
+			
+			while(rs.hasNext()) {
+				Log.info("singleModelQuery2.1");
+				QuerySolution solution = rs.next();
+				Resource resObj = solution.getResource(oesbModel.getSimpleName());
+				T instance = convertResourceToModel(oesbModel, resObj);
+				if(instance!=null) {
+					Log.info("singleModelQuery2.2");
+					oesbModels.add(instance);
+				}
+			}
+			dataset.close();
+		}
+
+        return oesbModels;
+	}
+	
+    public <T> List<T> convertResourceToModelObjects(Class<T> model, List<Resource> objects) {
+        List<T> models = new ArrayList<>();
+        for (Resource object : objects) {
+            T instance = convertResourceToModel(model, object);
+            if (instance != null) {
+                models.add(instance);
+            }
+        }
+        return models;
+    }
+	
+    @SuppressWarnings("unchecked")
+    public <T> T convertResourceToModel(Class<T> model, Resource object) {
+		Log.info("convertResourceToModel1");
+        return (T) convertResourceToUncheckedModel(model, object);
     }
 }

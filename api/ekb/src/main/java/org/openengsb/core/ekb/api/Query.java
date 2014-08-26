@@ -11,7 +11,7 @@ public interface Query {
      * 
      * @return List of Joined Classes
      */
-    List<Class<?>> getJoinClasses();
+    <T> List<Class<T>> getJoinClasses();
 
     /**
      * QueryFilter used within the query.

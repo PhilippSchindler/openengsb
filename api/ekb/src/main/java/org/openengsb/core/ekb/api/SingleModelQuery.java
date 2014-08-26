@@ -30,6 +30,10 @@ public class SingleModelQuery implements Query {
             this.queryProjection = new QueryProjection(model);
         }
     }
+    
+    public Class<?> getModel() {
+    	return model;
+    }
 
     @Override
     public List<Class<?>> getJoinClasses() {

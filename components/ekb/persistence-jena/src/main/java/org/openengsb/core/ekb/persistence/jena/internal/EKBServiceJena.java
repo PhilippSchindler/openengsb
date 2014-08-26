@@ -175,8 +175,7 @@ public class EKBServiceJena implements EKBService {
 
     @Override
     public <T> List<T> query(Query query) {
-        // TODO Auto-generated method stub
-        return null;
+    	return jenaService.query(query);
     }
 
     @Override

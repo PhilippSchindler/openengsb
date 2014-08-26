@@ -20,22 +20,33 @@ package org.openengsb.core.ekb.persistence.jena.internal;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
 import jline.internal.Log;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.jena.riot.RDFDataMgr;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openengsb.core.api.context.ContextHolder;
+import org.openengsb.core.api.model.OpenEngSBModel;
+import org.openengsb.core.api.model.OpenEngSBModelEntry;
+import org.openengsb.core.api.model.QueryRequest;
 import org.openengsb.core.api.security.AuthenticationContext;
+import org.openengsb.core.ekb.api.EDBQueryFilter;
 import org.openengsb.core.ekb.api.EKBCommit;
 import org.openengsb.core.ekb.api.EKBService;
 import org.openengsb.core.ekb.api.ModelRegistry;
+import org.openengsb.core.ekb.api.Query;
+import org.openengsb.core.ekb.api.SingleModelQuery;
 import org.openengsb.core.ekb.api.hooks.EKBErrorHook;
 import org.openengsb.core.ekb.api.hooks.EKBPostCommitHook;
 import org.openengsb.core.ekb.api.hooks.EKBPreCommitHook;
@@ -43,6 +54,7 @@ import org.openengsb.core.ekb.persistence.jena.internal.models.SubModel;
 import org.openengsb.core.ekb.persistence.jena.internal.models.TestModel;
 
 import com.hp.hpl.jena.query.Dataset;
+import com.hp.hpl.jena.query.ParameterizedSparqlString;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.tdb.TDBFactory;
 
@@ -62,8 +74,8 @@ public class ContextCommitTest {
         // mockito stuff
         authContext = mock(AuthenticationContext.class);
         when(authContext.getAuthenticatedPrincipal()).thenReturn("Fajar");
+        
         registry = new TestModelRegistry();
-
         JenaService ontoService = new JenaService(dataset, model, true);
         ontoService.setModelRegistry(registry);
         List<EKBPreCommitHook> preHooks = new ArrayList<EKBPreCommitHook>();
@@ -72,6 +84,15 @@ public class ContextCommitTest {
 
         this.service = new EKBServiceJena(ontoService, ontoConverter, preHooks, postHooks, errorHooks, authContext);
         ContextHolder.get().setCurrentContextId("test");
+    }
+    
+    @AfterClass
+    public static void cleanUp() {
+    	try {
+			FileUtils.cleanDirectory(new File("src/test/resources/"));
+		} catch (IOException e) {
+			Log.info("Failed cleaning test directory", e);
+		}
     }
 
     private EKBCommit createTestInsert() {
@@ -222,6 +243,42 @@ public class ContextCommitTest {
         Log.info(commit.getParentRevisionNumber());
         Log.info(commit.getConnectorInformation());
         Log.info(commit.getComment());
+    }
+    
+    @Test
+    public void testNonNativeQueryBuilder_ShouldWork() {
+    	QueryRequest queryRequest = QueryRequest.create();
+    	queryRequest.addParameter("id", "A2");
+    	queryRequest.setModelClassName("TestModel");
+    	queryRequest.caseInsensitive();
+    	ParameterizedSparqlString str = JenaQueryRequestConverter.convertSimpleQueryRequest(queryRequest, null);
+    	Log.info(str.toString());
+    }
+    
+    @Test
+    public void testNonNativeQuery_ShouldWork() {
+    	service.commit(createTestInsert1());
+    	service.commit(createTestInsert2());
+    	
+    	QueryRequest queryRequest = QueryRequest.create();
+    	queryRequest.addParameter("id", "A1");
+    	queryRequest.setModelClassName("TestModel");
+    	queryRequest.caseInsensitive();
+    	
+    	Query query = new SingleModelQuery(TestModel.class, new EDBQueryFilter(queryRequest), null);
+    	List<OpenEngSBModel> objs = service.query(query);
+    	Iterator<OpenEngSBModel> objsIter = objs.iterator();
+    	while(objsIter.hasNext()) {
+    		OpenEngSBModel obj = objsIter.next();
+    		Log.info("ID: ", obj.retrieveInternalModelId());
+    		List<OpenEngSBModelEntry> entries = obj.toOpenEngSBModelValues();
+    		Iterator<OpenEngSBModelEntry> entriesIter = entries.iterator();
+    		while(entriesIter.hasNext()) {
+    			OpenEngSBModelEntry entry = entriesIter.next();
+    			Log.info(entry.getKey());
+    			Log.info(entry.getValue()!=null ? entry.getValue() : "NULL");
+    		}
+    	}
     }
 
 }

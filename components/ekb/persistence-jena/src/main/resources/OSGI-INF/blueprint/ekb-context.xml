@@ -31,7 +31,6 @@
   </cm:property-placeholder>
   
   <!-- References to other bundles -->
-  <reference id="edbService" interface="org.openengsb.core.edb.api.EngineeringDatabaseService" />
   <reference id="modelRegistry" interface="org.openengsb.core.ekb.api.ModelRegistry" />
   <reference-list id="preCommitHooks" interface="org.openengsb.core.ekb.api.hooks.EKBPreCommitHook" availability="optional"/>
   <reference-list id="postCommitHooks" interface="org.openengsb.core.ekb.api.hooks.EKBPostCommitHook" availability="optional"/>
