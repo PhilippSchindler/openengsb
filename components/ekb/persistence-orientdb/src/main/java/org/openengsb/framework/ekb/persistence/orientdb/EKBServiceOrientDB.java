@@ -16,6 +16,7 @@ public class EKBServiceOrientDB implements EKBService {
     @Override
     public void commit(EKBCommit ekbCommit) {
 
+
     }
 
     @Override

@@ -29,9 +29,8 @@ public class EKBServiceOrientDBTests {
 
     @BeforeClass
     public static void setUp() throws IOException {
-        // TODO uncomment this
-        //createDatabaseAndSchema();
-        //initializeTestData();
+        createDatabaseAndSchema();
+        initializeTestData();
     }
 
 

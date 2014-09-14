@@ -61,9 +61,14 @@ public class SchemaGenerator {
         revision = schema.createAbstractClass("Revision", V);
 
         commit.createProperty("timestamp", OType.DATETIME);
-        commit.createProperty("inserts", OType.LINKLIST, revision);
-        commit.createProperty("updates", OType.LINKLIST, revision);
-        commit.createProperty("deletes", OType.LINKLIST, revision);
+        commit.createProperty("inserts", OType.INTEGER);
+        commit.createProperty("updates", OType.INTEGER);
+        commit.createProperty("deletes", OType.INTEGER);
+        commit.createProperty("insertedVertices", OType.LINKLIST, revision);
+        commit.createProperty("updatedVertices", OType.LINKLIST, revision);
+        commit.createProperty("deletedVertices", OType.LINKLIST, revision);
+        commit.createProperty("insertedEdges", OType.LINKLIST, E);
+        commit.createProperty("deletedEdges", OType.LINKLIST, E);
         commit.createProperty("parent", OType.LINK, commit);
         commit.createProperty("next", OType.LINK, commit);
         commit.createProperty("domainId", OType.STRING);
