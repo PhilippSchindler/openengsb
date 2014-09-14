@@ -19,10 +19,9 @@ public class Person {
     private String fullname;
     private String login;
     private String password;
+    private List<String> phoneNumbers;
 
-    List<Activity> performs;
-
-    List<String> tests;
+    private List<Activity> performs;
 
     public String getUiid() {
         return uiid;
@@ -64,6 +63,13 @@ public class Person {
         this.password = password;
     }
 
+    public List<String> getPhoneNumbers() {
+        return phoneNumbers;
+    }
+
+    public void setPhoneNumbers(List<String> phoneNumbers) {
+        this.phoneNumbers = phoneNumbers;
+    }
 
     public List<Activity> getPerforms() {
         return performs;

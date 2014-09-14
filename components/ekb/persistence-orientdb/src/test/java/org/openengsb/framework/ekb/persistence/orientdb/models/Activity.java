@@ -19,8 +19,8 @@ public class Activity {
     private int duration;
     private int expectedDuration;
 
-    Project belongsTo;
-    Manager isSpecifiedBy;
+    private Project belongsTo;
+    private Manager isSpecifiedBy;
 
     public String getUiid() {
         return uiid;
