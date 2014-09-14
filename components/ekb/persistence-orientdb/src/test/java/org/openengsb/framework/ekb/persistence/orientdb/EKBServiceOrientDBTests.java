@@ -51,7 +51,13 @@ public class EKBServiceOrientDBTests {
 
     @Test
     public void testInsert_shouldCreateDataAndVersioningInfos() {
-        // todo continue...
+        EKBCommit commit = new EKBCommit();
+        commit.addInsert(persons[0]);
+
+        EKBServiceOrientDB service = new EKBServiceOrientDB();
+        service.setDatabase(OrientDBHelper.getDefault().getConnection().getRawGraph());
+
+        service.commit(commit);
     }
 
 
@@ -78,7 +84,10 @@ public class EKBServiceOrientDBTests {
             persons[i] = new Person();
 
         persons[0].setFullname("Anna");
-        persons[1].setFullname("Bernd");  persons[1].setPhoneNumbers(Arrays.asList("012/1000454", "+43555/8996333"));
+        persons[0].setPhoneNumbers(Arrays.asList("012/1000454", "+43555/8996333"));
+        persons[0].setPerforms(Arrays.asList(new Activity(), new Activity(), new Activity()));
+
+        persons[1].setFullname("Bernd");
         persons[2].setFullname("Claus");
         persons[3].setFullname("Hans");
         persons[4].setFullname("Georg");

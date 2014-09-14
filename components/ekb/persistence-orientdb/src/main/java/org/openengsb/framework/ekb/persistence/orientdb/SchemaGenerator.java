@@ -85,9 +85,9 @@ public class SchemaGenerator {
 
         history.createProperty("archived", OType.BOOLEAN);
 
-        revision.createProperty("commit",    OType.LINK, commit);
-        revision.createProperty("from",      OType.DATETIME);
-        revision.createProperty("to",        OType.DATETIME);
+        revision.createProperty("commit", OType.LINK, commit);
+        revision.createProperty("from", OType.DATETIME);
+        revision.createProperty("to", OType.DATETIME);
     }
 
     public void addModel(Class<?> clazz) {
