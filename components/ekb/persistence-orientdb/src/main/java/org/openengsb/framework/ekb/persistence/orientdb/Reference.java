@@ -1,17 +1,15 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
-import com.orientechnologies.orient.core.metadata.schema.OClass;
-
 /**
  * Created by Philipp Schindler on 13.09.2014.
  */
 public class Reference {
 
-    private final OClass from;
+    private final String from;
     private final String name;
-    private final Class<?> to;
+    private final String to;
 
-    public OClass getFrom() {
+    public String getFrom() {
         return from;
     }
 
@@ -19,11 +17,11 @@ public class Reference {
         return name;
     }
 
-    public Class<?> getTo() {
+    public String getTo() {
         return to;
     }
 
-    public Reference(OClass from, String name, Class<?> to) {
+    public Reference(String from, String name, String to) {
         this.from = from;
         this.name = name;
         this.to = to;

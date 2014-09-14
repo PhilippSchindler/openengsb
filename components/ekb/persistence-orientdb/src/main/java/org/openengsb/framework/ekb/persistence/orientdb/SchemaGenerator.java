@@ -9,7 +9,10 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Created by Philipp Schindler on 13.09.2014.
@@ -139,30 +142,35 @@ public class SchemaGenerator {
 
     private OClass createModelClass(Class<?> clazz, List<Reference> references) {
         OClass modelClass;
+        String modelName = clazz.getSimpleName();
         Class<?> superclass = clazz.getSuperclass();
 
         if (superclass == Object.class) {
-            modelClass = schema.createClass(clazz.getSimpleName(), entity);
+            modelClass = schema.createClass(modelName, entity);
         }
         else {
-            modelClass = schema.createClass(clazz.getSimpleName(), schema.getClass(superclass.getSimpleName()));
+            modelClass = schema.createClass(modelName, schema.getClass(superclass.getSimpleName()));
         }
 
-        createPropertiesForModel(clazz, modelClass, references);
+        createPropertiesForModel(clazz, modelClass, modelName, references);
         return modelClass;
     }
 
-    private void createPropertiesForModel(Class<?> clazz, OClass modelClass, List<Reference> references) {
+    private void createPropertiesForModel(Class<?> clazz, OClass modelClass, String modelName, List<Reference> references) {
         for(Field field : clazz.getDeclaredFields()) {
             String propertyName = field.getName();
             OType propertyType = OType.getTypeByClass(field.getType());
+
+            // TODO better way to filter out injected fields
+            if(propertyName.equals("openEngSBModelTail") || propertyName.equals("_INTERNAL_LOGGER"))
+                continue;
 
             if (propertyType == null) {
                 // not a native java type - so it should be a model
                 // TODO add a check if it's really a model here
                 // we create a reference (from, name, to) here to create the edge schema later
                 // because the class for the referenced model might not be created here
-                references.add(new Reference(modelClass, propertyName, field.getType()));
+                references.add(new Reference(modelName, propertyName, field.getType().getSimpleName()));
             }
             else if (propertyType == OType.EMBEDDEDLIST || propertyType == OType.EMBEDDEDSET) {
                 // check if contents of lists/sets are native types or models
@@ -175,7 +183,7 @@ public class SchemaGenerator {
                     // lists or ets of models are handled by edges - so no properties are created
                     // we create a reference (from, name, to) here to create the edge schema later
                     // because the class for the referenced model might not be created here
-                    references.add(new Reference(modelClass, propertyName, innerClass));
+                    references.add(new Reference(modelName, propertyName, innerClass.getSimpleName()));
                 }
                 else {
                     // CREATE an EMBEDDEDLIST or EMBEDDEDSET as an property
@@ -207,8 +215,12 @@ public class SchemaGenerator {
             }
             else {
                 OClass ref = schema.createClass(reference.getName(), E);
-                ref.createProperty("out", OType.LINK, reference.getFrom());
-                ref.createProperty("in", OType.LINK, schema.getClass(reference.getTo().getSimpleName()));
+                ref.createProperty("out", OType.LINK, schema.getClass(reference.getFrom() + "History"));
+                ref.createProperty("in", OType.LINK, schema.getClass(reference.getTo() + "History"));
+                ref.createProperty("from", OType.DATETIME);
+                ref.createProperty("to", OType.DATETIME);
+                ref.createProperty("createdBy", OType.LINK, commit);
+                ref.createProperty("deletedBy", OType.LINK, commit);
             }
         }
     }
