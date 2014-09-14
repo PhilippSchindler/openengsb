@@ -1,24 +1,23 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
+import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by Philipp Schindler on 13.09.2014.
  */
 public class SchemaGenerator {
 
-    private ODatabaseDocumentTx database;
+    private OrientGraphNoTx graph;
+    private ODatabaseDocument database;
     private OSchema schema;
 
     private OClass V;
@@ -34,17 +33,18 @@ public class SchemaGenerator {
         models = new ArrayList<Class<?>>();
     }
 
-    public SchemaGenerator(ODatabaseDocumentTx database) {
+    public SchemaGenerator(OrientGraphNoTx database) {
         this();
-        this.database = database;
+        setDatabase(database);
     }
 
-    public ODatabaseDocumentTx getDatabase() {
-        return database;
+    public OrientGraphNoTx getDatabase() {
+        return graph;
     }
 
-    public void setDatabase(ODatabaseDocumentTx database) {
-        this.database = database;
+    public void setDatabase(OrientGraphNoTx database) {
+        this.graph = database;
+        this.database = database.getRawGraph();
     }
 
     public void generateVersioningSchema()
@@ -75,16 +75,9 @@ public class SchemaGenerator {
 
         entity.createProperty("history", OType.LINK, history);
 
-        history.createProperty("current", OType.LINK, entity);
-        history.createProperty("first", OType.LINK, entity);
-        history.createProperty("last", OType.LINK, entity);
-        history.createProperty("revisions", OType.LINKLIST, revision);
         history.createProperty("archived", OType.BOOLEAN);
 
         revision.createProperty("commit",    OType.LINK, commit);
-        revision.createProperty("history",   OType.LINK, history);
-        revision.createProperty("prev",      OType.LINK, revision);
-        revision.createProperty("next",      OType.LINK, revision);
         revision.createProperty("from",      OType.DATETIME);
         revision.createProperty("to",        OType.DATETIME);
     }
@@ -109,36 +102,41 @@ public class SchemaGenerator {
 
         // create classes for all edges
         createReferences(references);
+
+        models.clear();
     }
 
     private void createVersioning(OClass modelClass) {
         OClass modelHistory  = schema.createClass(modelClass.getName() + "History", history);
         OClass modelRevision = schema.createClass(modelClass.getName() + "Revision", revision);
 
-        modelHistory.getProperty("current").set(OProperty.ATTRIBUTES.LINKEDCLASS, modelClass);
-        modelHistory.getProperty("last").set(OProperty.ATTRIBUTES.LINKEDCLASS, modelRevision);
-        modelHistory.getProperty("first").set(OProperty.ATTRIBUTES.LINKEDCLASS, modelRevision);
-        modelHistory.getProperty("revisions").set(OProperty.ATTRIBUTES.LINKEDCLASS, modelRevision);
+        modelHistory.createProperty("current", OType.LINK, modelClass);
+        modelHistory.createProperty("last", OType.LINK, modelClass);
+        modelHistory.createProperty("first", OType.LINK, modelClass);
+        modelHistory.createProperty("revisions", OType.LINKLIST, modelRevision);
 
-        modelRevision.getProperty("history").set(OProperty.ATTRIBUTES.LINKEDCLASS, modelHistory);
-        modelRevision.getProperty("prev").set(OProperty.ATTRIBUTES.LINKEDCLASS, modelRevision);
-        modelRevision.getProperty("next").set(OProperty.ATTRIBUTES.LINKEDCLASS, modelRevision);
+        modelRevision.createProperty("history", OType.LINK, modelHistory);
+        modelRevision.createProperty("prev", OType.LINK, modelRevision);
+        modelRevision.createProperty("next", OType.LINK, modelRevision);
 
         for (OProperty property : modelClass.properties()) {
             String name = property.getName();
             if (!name.equals("history")) {
-                modelRevision.createProperty(name, property.getType(), property.getLinkedClass());
+                if (property.getLinkedClass() == null) {
+                    modelRevision.createProperty(name, property.getType());
+                }
+                else {
+                    modelRevision.createProperty(name, property.getType(), property.getLinkedClass());
+                }
             }
         }
-
-        modelClass.getName();
     }
 
     private OClass createModelClass(Class<?> clazz, List<Reference> references) {
         OClass modelClass;
         Class<?> superclass = clazz.getSuperclass();
 
-        if (superclass == null) {
+        if (superclass == Object.class) {
             modelClass = schema.createClass(clazz.getSimpleName(), entity);
         }
         else {
