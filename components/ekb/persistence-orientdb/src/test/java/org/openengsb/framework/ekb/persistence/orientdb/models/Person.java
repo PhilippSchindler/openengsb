@@ -2,6 +2,7 @@ package org.openengsb.framework.ekb.persistence.orientdb.models;
 
 import org.openengsb.core.api.model.annotation.Model;
 import org.openengsb.core.api.model.annotation.OpenEngSBModelId;
+import org.openengsb.framework.ekb.persistence.orientdb.Relationship;
 
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class Person {
     private String password;
     private List<String> phoneNumbers;
 
+    @Relationship
     private List<Activity> performs;
 
     public String getUiid() {

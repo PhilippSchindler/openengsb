@@ -55,7 +55,7 @@ public class EKBServiceOrientDBTests {
         commit.addInsert(persons[0]);
 
         EKBServiceOrientDB service = new EKBServiceOrientDB();
-        service.setDatabase(OrientDBHelper.getDefault().getConnection().getRawGraph());
+        service.setDatabase(OrientDBHelper.getDefault().getConnection());
 
         service.commit(commit);
     }
