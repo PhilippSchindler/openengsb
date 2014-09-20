@@ -2,11 +2,11 @@ package org.openengsb.framework.ekb.persistence.orientdb;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.metadata.schema.OType;
+import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 import org.openengsb.core.api.model.OpenEngSBModel;
 import org.openengsb.core.api.model.OpenEngSBModelEntry;
-import org.openengsb.core.ekb.api.EKBCommit;
 import org.openengsb.core.ekb.api.EKBService;
 import org.openengsb.core.ekb.api.Query;
 import org.openengsb.core.ekb.api.TransformationDescriptor;
@@ -16,7 +16,10 @@ import java.util.*;
 /**
  * Created by Philipp Schindler on 13.09.2014.
  */
-public class EKBServiceOrientDB implements EKBService {
+// TODO: implements EKBService
+// EKBService need to be changed to the new EKBCommit Interface
+
+public class EKBServiceOrientDB {
 
     OrientGraph graph;
     ODatabaseDocumentTx database;
@@ -30,7 +33,7 @@ public class EKBServiceOrientDB implements EKBService {
         this.database = graph.getRawGraph();
     }
 
-    @Override
+    //@Override
     public void commit(EKBCommit ekbCommit) {
 
         Date timestamp = new Date();
@@ -38,12 +41,15 @@ public class EKBServiceOrientDB implements EKBService {
 
 
 
-        List<OpenEngSBModel> inserts = ekbCommit.getInserts();
-        OpenEngSBModel insert = inserts.get(0);
+        List<Operation> inserts = ekbCommit.getOperations(OperationType.INSERT);
 
-        Map<String, Object> properties = new HashMap<String, Object>();
-        Map<String, List<OpenEngSBModel>> references = new HashMap<String,  List<OpenEngSBModel>>();
-        extractProperties(insert, properties, references);
+
+
+        //OpenEngSBModel insert = inserts.get(0);
+
+        //Map<String, Object> properties = new HashMap<String, Object>();
+        //Map<String, List<OpenEngSBModel>> references = new HashMap<String,  List<OpenEngSBModel>>();
+        //extractProperties(insert, properties, references);
 
 //        List<OpenEngSBModelEntry> entries = insert.toOpenEngSBModelValues();
 //        OpenEngSBModelEntry fullname     = entries.get(2);
@@ -52,6 +58,26 @@ public class EKBServiceOrientDB implements EKBService {
 
         database.commit();
     }
+
+
+    private OrientVertex performInsertOperation(Operation operation, OrientVertex commit) {
+        OpenEngSBModel model = operation.getModel();
+        OrientVertex v_entity = graph.addVertex("class:" + getModelClassName(model));
+
+        v_entity.setProperties(extractProperties(model));
+        v_entity.setProperty("commit", commit);
+
+        return v_entity;
+    }
+
+
+    private String getModelClassName(OpenEngSBModel model) {
+        return model.getClass().getSimpleName();
+    }
+
+
+
+
 
 
     private void insertModel(OpenEngSBModel model, OrientVertex v_commit)
@@ -64,6 +90,22 @@ public class EKBServiceOrientDB implements EKBService {
         v_current.setProperty("history", v_history);
     }
 
+
+    private Map<String, Object> extractProperties(OpenEngSBModel model) {
+        Map<String, Object> properties = new HashMap<>();
+        for (OpenEngSBModelEntry entry : model.toOpenEngSBModelValues()) {
+            if (entry.getValue() != null && !entry.getKey().equals("RID")) {
+                if (OType.getTypeByClass(entry.getType()) == null) {
+                    throw new IllegalArgumentException("Invalid model - some properties of this model cannot be " +
+                                                       "persisted!");
+                }
+                else {
+                    properties.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        return properties;
+    }
 
 
     private void extractProperties(OpenEngSBModel model, Map<String, Object> properties,
@@ -162,42 +204,42 @@ public class EKBServiceOrientDB implements EKBService {
 
 
 
-    @Override
+    //@Override
     public void commit(EKBCommit ekbCommit, UUID headRevision) {
 
     }
 
-    @Override
+    //@Override
     public void addTransformation(TransformationDescriptor descriptor) {
 
     }
 
-    @Override
+    //@Override
     public <T> List<T> query(Query query) {
         return null;
     }
 
-    @Override
+    //@Override
     public Object nativeQuery(Object query) {
         return null;
     }
 
-    @Override
+    //@Override
     public UUID getLastRevisionId() {
         return null;
     }
 
-    @Override
+    // @Override
     public void deleteCommit(UUID headRevision) {
 
     }
 
-    @Override
+    // @Override
     public EKBCommit loadCommit(UUID revision) {
         return null;
     }
 
-    @Override
+    // @Override
     public <T> T getModel(Class<T> model, String oid) {
         return null;
     }

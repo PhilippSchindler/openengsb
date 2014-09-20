@@ -6,7 +6,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.openengsb.core.ekb.api.EKBCommit;
 import org.openengsb.framework.ekb.persistence.orientdb.models.Activity;
 import org.openengsb.framework.ekb.persistence.orientdb.models.Manager;
 import org.openengsb.framework.ekb.persistence.orientdb.models.Person;
@@ -45,14 +44,14 @@ public class EKBServiceOrientDBTests {
 
     @Test
     public void testAddInsert_shouldInsertModelIntoCommit() {
-        EKBCommit commit = new EKBCommit();
-        commit.addInsert(persons[0]);
+        EKBCommit commit = new EKBCommitImpl();
+        commit.addOperation(new Operation(OperationType.INSERT, persons[0]));
     }
 
     @Test
     public void testInsert_shouldCreateDataAndVersioningInfos() {
-        EKBCommit commit = new EKBCommit();
-        commit.addInsert(persons[0]);
+        EKBCommit commit = new EKBCommitImpl();
+        commit.addOperation(new Operation(OperationType.INSERT, persons[0]));
 
         EKBServiceOrientDB service = new EKBServiceOrientDB();
         service.setDatabase(OrientDBHelper.getDefault().getConnection());
@@ -85,7 +84,6 @@ public class EKBServiceOrientDBTests {
 
         persons[0].setFullname("Anna");
         persons[0].setPhoneNumbers(Arrays.asList("012/1000454", "+43555/8996333"));
-        persons[0].setPerforms(Arrays.asList(new Activity(), new Activity(), new Activity()));
 
         persons[1].setFullname("Bernd");
         persons[2].setFullname("Claus");

@@ -2,7 +2,6 @@ package org.openengsb.framework.ekb.persistence.orientdb.models;
 
 import org.openengsb.core.api.model.annotation.Model;
 import org.openengsb.core.api.model.annotation.OpenEngSBModelId;
-import org.openengsb.framework.ekb.persistence.orientdb.Relationship;
 
 /**
  * Created by Philipp Schindler on 13.09.2014.
@@ -19,12 +18,6 @@ public class Activity {
     private boolean finished;
     private int duration;
     private int expectedDuration;
-
-    @Relationship
-    private Project belongsTo;
-
-    @Relationship
-    private Manager isSpecifiedBy;
 
     public String getUiid() {
         return uiid;
@@ -74,20 +67,4 @@ public class Activity {
         this.expectedDuration = expectedDuration;
     }
 
-
-    public Project getBelongsTo() {
-        return belongsTo;
-    }
-
-    public void setBelongsTo(Project belongsTo) {
-        this.belongsTo = belongsTo;
-    }
-
-    public Manager getIsSpecifiedBy() {
-        return isSpecifiedBy;
-    }
-
-    public void setIsSpecifiedBy(Manager isSpecifiedBy) {
-        this.isSpecifiedBy = isSpecifiedBy;
-    }
 }

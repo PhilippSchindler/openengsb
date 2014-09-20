@@ -2,7 +2,6 @@ package org.openengsb.framework.ekb.persistence.orientdb.models;
 
 import org.openengsb.core.api.model.annotation.Model;
 import org.openengsb.core.api.model.annotation.OpenEngSBModelId;
-import org.openengsb.framework.ekb.persistence.orientdb.Relationship;
 
 import java.util.Date;
 
@@ -22,9 +21,6 @@ public class Project {
     private Date endDate;
     private Date plannedEndDate;
     private String stage;
-
-    @Relationship
-    private Project hasManager;
 
     public String getUiid() {
         return uiid;
@@ -82,12 +78,4 @@ public class Project {
         this.stage = stage;
     }
 
-
-    public Project getHasManager() {
-        return hasManager;
-    }
-
-    public void setHasManager(Project hasManager) {
-        this.hasManager = hasManager;
-    }
 }
