@@ -74,7 +74,21 @@ public class EKBServiceOrientDBTests {
         EKBCommit c5 = new EKBCommitImpl();
         persons[0].setPassword("update02");
         c5.addOperation(new Operation(OperationType.UPDATE, persons[0]));
+        c5.addOperation(new Operation(OperationType.INSERT, activities[0]));
+        c5.addOperation(new Operation(OperationType.INSERT, activities[1]));
+        c5.addOperation(new Operation(OperationType.INSERT, activities[2]));
         service.commit(c5);
+
+        EKBCommit c6 = new EKBCommitImpl();
+        Relationship r0 = new RelationshipImpl("performs", persons[0], activities[1]);
+        c6.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, new RelationshipImpl("performs", persons[0], activities[0])));
+        c6.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r0));
+        c6.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, new RelationshipImpl("performs", persons[0], activities[2])));
+        service.commit(c6);
+
+        EKBCommit c7 = new EKBCommitImpl();
+        c7.addOperation(new Operation(OperationType.DELETE_RELATIONSHIP, r0));
+        service.commit(c7);
     }
 
     private static void createDatabaseAndSchema() throws IOException {
@@ -106,6 +120,15 @@ public class EKBServiceOrientDBTests {
         persons[3].setFullname("Hans");
         persons[4].setFullname("Georg");
         persons[5].setFullname("Peter");
+
+
+        activities = new Activity[3];
+        for (int i = 0; i < activities.length; i++ )
+            activities[i] = new Activity();
+
+        activities[0].setDesciption("Activity 01");
+        activities[1].setDesciption("Activity 02");
+        activities[2].setDesciption("Activity 03");
     }
 
 }

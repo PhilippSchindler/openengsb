@@ -7,6 +7,6 @@ public enum OperationType {
     INSERT,
     UPDATE,
     DELETE,
-    INSERT_EDGE,
-    DELETE_EDGE
+    INSERT_RELATIONSHIP,
+    DELETE_RELATIONSHIP
 }
