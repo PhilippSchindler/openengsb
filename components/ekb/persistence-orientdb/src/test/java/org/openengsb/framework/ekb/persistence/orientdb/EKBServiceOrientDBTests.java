@@ -32,15 +32,11 @@ public class EKBServiceOrientDBTests {
         initializeTestData();
     }
 
-
-
     @AfterClass
     public static void cleanUp() {
         // drop database here
         // currently not doing this because of inspecting of the data with orientdb studio (orientdb gui)
     }
-
-
 
     @Test
     public void testAddInsert_shouldInsertModelIntoCommit() {
@@ -49,16 +45,37 @@ public class EKBServiceOrientDBTests {
     }
 
     @Test
-    public void testInsert_shouldCreateDataAndVersioningInfos() {
-        EKBCommit commit = new EKBCommitImpl();
-        commit.addOperation(new Operation(OperationType.INSERT, persons[0]));
+    public void testCommit_shouldCreateDataAndVersioningInfos() {
 
         EKBServiceOrientDB service = new EKBServiceOrientDB();
         service.setDatabase(OrientDBHelper.getDefault().getConnection());
 
-        service.commit(commit);
-    }
+        EKBCommit c1 = new EKBCommitImpl();
+        c1.addOperation(new Operation(OperationType.INSERT, persons[0]));
+        c1.addOperation(new Operation(OperationType.INSERT, persons[1]));
+        c1.addOperation(new Operation(OperationType.INSERT, persons[2]));
+        c1.addOperation(new Operation(OperationType.INSERT, persons[3]));
+        service.commit(c1);
 
+        EKBCommit c2 = new EKBCommitImpl();
+        c2.addOperation(new Operation(OperationType.INSERT, persons[4]));
+        c2.addOperation(new Operation(OperationType.INSERT, persons[5]));
+        service.commit(c2);
+
+        EKBCommit c3 = new EKBCommitImpl();
+        c3.addOperation(new Operation(OperationType.DELETE, persons[4]));
+        service.commit(c3);
+
+        EKBCommit c4 = new EKBCommitImpl();
+        persons[0].setPassword("update01");
+        c4.addOperation(new Operation(OperationType.UPDATE, persons[0]));
+        service.commit(c4);
+
+        EKBCommit c5 = new EKBCommitImpl();
+        persons[0].setPassword("update02");
+        c5.addOperation(new Operation(OperationType.UPDATE, persons[0]));
+        service.commit(c5);
+    }
 
     private static void createDatabaseAndSchema() throws IOException {
         OrientDBHelper.getDefault().createOrOverwriteDatabase();
@@ -66,13 +83,12 @@ public class EKBServiceOrientDBTests {
 
         SchemaGenerator generator = new SchemaGenerator();
         generator.setDatabase(database);
+        generator.generateVersioningSchema();
+
         generator.addModel(Activity.class);
         generator.addModel(Project.class);
         generator.addModel(Person.class);
         generator.addModel(Manager.class);  // manager must be added after person due to inheritance
-
-        generator.generateVersioningSchema();
-        generator.generateSchemaForModels();
 
         database.shutdown();
     }

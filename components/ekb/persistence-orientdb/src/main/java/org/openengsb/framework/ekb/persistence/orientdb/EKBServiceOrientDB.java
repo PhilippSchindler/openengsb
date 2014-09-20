@@ -1,16 +1,18 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.id.ORID;
+import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 import org.openengsb.core.api.model.OpenEngSBModel;
 import org.openengsb.core.api.model.OpenEngSBModelEntry;
-import org.openengsb.core.ekb.api.EKBService;
 import org.openengsb.core.ekb.api.Query;
 import org.openengsb.core.ekb.api.TransformationDescriptor;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 /**
@@ -37,11 +39,23 @@ public class EKBServiceOrientDB {
     public void commit(EKBCommit ekbCommit) {
 
         Date timestamp = new Date();
-        OrientVertex v_commit = createCommitVertex(ekbCommit, timestamp, null);
+        ODocument v_commit = createCommitVertex(ekbCommit, timestamp, null);
 
+        List<ODocument> v_inserted = new ArrayList<>();
+        List<Operation> insertOperations = ekbCommit.getOperations(OperationType.INSERT);
 
+        for (Operation operation : insertOperations) {
+            v_inserted.add(performInsertOperation(operation, v_commit));
+        }
 
-        List<Operation> inserts = ekbCommit.getOperations(OperationType.INSERT);
+        for (Operation operation : ekbCommit.getOperations(OperationType.UPDATE)) {
+            performUpdateOperation(operation, v_commit);
+        }
+
+        for (Operation operation : ekbCommit.getOperations(OperationType.DELETE)) {
+            performDeleteOperation(operation, v_commit);
+        }
+
 
 
 
@@ -56,24 +70,136 @@ public class EKBServiceOrientDB {
 //        OpenEngSBModelEntry phoneNumbers = entries.get(5);
 //        OpenEngSBModelEntry performs     = entries.get(6);
 
+        v_commit.save();
+
         database.commit();
+
+
+        // store rid's back for future updates/deletes
+        int i = 0;
+        for (Operation operation : insertOperations) {
+            setRID(operation.getModel(), v_inserted.get(i).getIdentity());
+            i++;
+        }
     }
 
 
-    private OrientVertex performInsertOperation(Operation operation, OrientVertex commit) {
+    private ODocument performInsertOperation(Operation operation, ODocument v_commit) {
         OpenEngSBModel model = operation.getModel();
-        OrientVertex v_entity = graph.addVertex("class:" + getModelClassName(model));
 
-        v_entity.setProperties(extractProperties(model));
-        v_entity.setProperty("commit", commit);
+        ODocument v_entity = database.newInstance(getModelClassName(model));
+        ODocument v_history = database.newInstance(getModelClassName(model) + "History");
+        ODocument v_revision = database.newInstance("Revision");
+
+        Map<String, Object> properties = extractProperties(model);
+
+        v_entity.fields(properties);
+        v_entity.field("history", v_history);
+        v_entity.field("commit", v_commit);
+
+        v_history.field("createdBy", v_commit);
+        v_history.field("deleteBy", (ODocument) null);
+        v_history.field("archived", false);
+        v_history.field("revisions", Arrays.asList(v_revision));
+        v_history.field("current", v_entity);
+        v_history.field("last", v_revision);
+        v_history.field("first", v_revision);
+
+        v_revision.fields(properties);
+        v_revision.field("commit", v_commit);
+        v_revision.field("history", v_history);
+
+        v_history.save();
+        v_entity.save();
+        v_revision.save();
 
         return v_entity;
     }
+
+    private void performUpdateOperation(Operation operation, ODocument v_commit) {
+        OpenEngSBModel model = operation.getModel();
+
+        ODocument v_entity = database.load(getRID(model));
+        ODocument v_revision = database.newInstance("Revision");
+        ODocument v_history  = v_entity.field("history");
+        ODocument v_prev_revision = v_history.field("last");
+
+        // update the fields for the new current version
+        v_entity.clear();
+        v_entity.fields(extractProperties(model));
+        v_entity.field("commit", v_commit);
+        v_entity.field("history", v_history);
+
+        // update the fields for the new revision
+        v_revision.fields(extractProperties(model));
+        v_revision.field("commit", v_commit);
+        v_revision.field("history", v_history);
+
+        // update history
+        ((List<ODocument>) v_history.field("revisions")).add(v_revision);
+        v_history.field("last", v_revision);
+        v_revision.field("prev", v_prev_revision);
+        v_prev_revision.field("next", v_revision);
+
+        v_entity.save();
+        v_history.save();
+        v_revision.save();
+        v_prev_revision.save();
+
+        // TODO check if relationships should be inherited here and create/update them
+    }
+
+    private void performDeleteOperation(Operation operation, ODocument v_commit) {
+        OpenEngSBModel model = operation.getModel();
+
+        ODocument v_entity = database.load(getRID(model));
+        ODocument v_history  = v_entity.field("history");
+
+        // update history
+        v_history.field("archived", true);
+        v_history.field("deleteBy", v_commit);
+        v_history.field("current", (ODocument)null);
+
+        // drop current version
+        v_entity.delete();
+
+        v_history.save();
+        // TODO handle relationships
+    }
+
+
 
 
     private String getModelClassName(OpenEngSBModel model) {
         return model.getClass().getSimpleName();
     }
+
+    private ORID getRID(OpenEngSBModel model) {
+        List<OpenEngSBModelEntry> entries = model.toOpenEngSBModelValues();
+        for (OpenEngSBModelEntry entry : entries) {
+            if (entry.getKey().equals("RID")) {
+                if (entry.getValue() == null) {
+                    throw new IllegalArgumentException("RID of model not set. RID is required for an update!");
+                }
+                return new ORecordId((String) entry.getValue());
+            }
+        }
+        throw new IllegalArgumentException("RID of model not set. RID is required for an update!");
+    }
+
+    private void setRID(OpenEngSBModel model, ORID rid) {
+        try {
+            model.getClass().getMethod("setRID", String.class).invoke(model, rid.toString());
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 
 
 
@@ -146,20 +272,20 @@ public class EKBServiceOrientDB {
 
     }
 
-    private OrientVertex createCommitVertex(EKBCommit commit, Date timestamp, OrientVertex v_parentCommit) {
-        OrientVertex v_commit = graph.addVertex("class:Commit");
+    private ODocument createCommitVertex(EKBCommit commit, Date timestamp, ODocument v_parentCommit) {
+        ODocument v_commit = database.newInstance("Commit");
 
-        v_commit.setProperty("timestamp", timestamp);
-        v_commit.setProperty("domainId", commit.getDomainId());
-        v_commit.setProperty("connectorId", commit.getConnectorId());
-        v_commit.setProperty("instanceId", commit.getInstanceId());
-        v_commit.setProperty("comment", commit.getComment());
-        v_commit.setProperty("revisionNumber", commit.getRevisionNumber());
+        v_commit.field("timestamp", timestamp);
+        v_commit.field("domainId", commit.getDomainId());
+        v_commit.field("connectorId", commit.getConnectorId());
+        v_commit.field("instanceId", commit.getInstanceId());
+        v_commit.field("comment", commit.getComment());
+        v_commit.field("revisionNumber", commit.getRevisionNumber());
 
         if (v_parentCommit != null) {
-            v_commit.setProperty("parentRevisionNumber", v_parentCommit.getProperty("revisionNumber"));
-            v_commit.setProperty("parent", v_parentCommit);
-            v_parentCommit.setProperty("next", v_commit);
+            v_commit.field("parentRevisionNumber", v_parentCommit.field("revisionNumber"));
+            v_commit.field("parent", v_parentCommit);
+            v_parentCommit.field("next", v_commit);
         }
 
         return v_commit;

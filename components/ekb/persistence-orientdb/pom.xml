@@ -108,6 +108,11 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Private-Package>com.orientechnologies</Private-Package>
+                    </instructions>
+                </configuration>
             </plugin>
         </plugins>
     </build>
