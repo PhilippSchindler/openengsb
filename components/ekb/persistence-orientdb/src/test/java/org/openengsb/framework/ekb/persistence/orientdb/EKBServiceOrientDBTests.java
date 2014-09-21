@@ -10,6 +10,7 @@ import org.openengsb.framework.ekb.persistence.orientdb.models.Activity;
 import org.openengsb.framework.ekb.persistence.orientdb.models.Manager;
 import org.openengsb.framework.ekb.persistence.orientdb.models.Person;
 import org.openengsb.framework.ekb.persistence.orientdb.models.Project;
+import org.openengsb.framework.ekb.persistence.orientdb.visualization.DotExporter;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -88,7 +89,14 @@ public class EKBServiceOrientDBTests {
 
         EKBCommit c7 = new EKBCommitImpl();
         c7.addOperation(new Operation(OperationType.DELETE_RELATIONSHIP, r0));
+        c7.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, new RelationshipImpl("performs", persons[1], activities[2])));
         service.commit(c7);
+
+        EKBCommit c8 = new EKBCommitImpl();
+        c8.addOperation(new Operation(OperationType.DELETE, persons[1]));
+        service.commit(c8);
+
+        DotExporter.export(service.getDatabase().getRawGraph(), "C:\\Users\\sp\\db.dot", "PersonHistory", "ActivityHistory");
     }
 
     private static void createDatabaseAndSchema() throws IOException {
