@@ -133,7 +133,9 @@ public class EKBServiceOrientDB {
         v_entity.field("commit", v_commit);
 
         // update the fields for the new revision
-        v_entity.copyTo(v_revision);
+        v_revision.fields(extractProperties(model));
+        v_revision.field("commit", v_commit);
+        v_revision.field("history", v_history);
 
         // if there are relationships with v_entity, the links from the relationship to the new revision must be created
         for (Link link : getLinks(v_entity)) {
@@ -147,10 +149,6 @@ public class EKBServiceOrientDB {
                 }
             }
         }
-
-        v_revision.fields(extractProperties(model));
-        v_revision.field("commit", v_commit);
-        v_revision.field("history", v_history);
 
         // update history
         ((List<ODocument>) v_history.field("revisions")).add(v_revision);

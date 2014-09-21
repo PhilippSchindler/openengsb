@@ -6,14 +6,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.openengsb.framework.ekb.persistence.orientdb.models.Activity;
-import org.openengsb.framework.ekb.persistence.orientdb.models.Manager;
-import org.openengsb.framework.ekb.persistence.orientdb.models.Person;
-import org.openengsb.framework.ekb.persistence.orientdb.models.Project;
+import org.openengsb.core.api.model.OpenEngSBModel;
+import org.openengsb.core.api.model.OpenEngSBModelEntry;
+import org.openengsb.framework.ekb.persistence.orientdb.models.*;
 import org.openengsb.framework.ekb.persistence.orientdb.visualization.DotExporter;
 
+import java.awt.*;
 import java.io.IOException;
-import java.util.Arrays;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.List;
 
 /**
  * Created by Philipp Schindler on 14.09.2014.
@@ -99,6 +101,76 @@ public class EKBServiceOrientDBTests {
         DotExporter.export(service.getDatabase().getRawGraph(), "C:\\Users\\sp\\db.dot", "PersonHistory", "ActivityHistory");
     }
 
+    @Test
+    public void testComplexModel() {
+        ComplexModel model = new ComplexModel();
+
+        model.setSomeString("Hallo Welt");
+        model.setSomeByte((byte) 47);
+        model.setSomeShort((short) 4711);
+        model.setSomeInteger(-1457777);
+        model.setSomeLong(555555555555555L);
+        model.setSomeFloat(47.11f);
+        model.setSomeDouble(47.12);
+        model.setSomeDecimal(new BigDecimal("123456789123456789123456789123456789123456789123456789123456789"));
+        model.setSomeBoolean(true);
+        model.setSomeBinary(new byte[]{1, 2, 4, 8, 16, 32, 64});
+
+        Calendar c = Calendar.getInstance();
+        c.set(2006, 05, 04, 03, 02, 01);
+        model.setSomeDate(c.getTime());
+
+        model.setSomeEmbeddedObject(new StringBuilder());
+
+        List<Object> someEmbeddedList = new ArrayList<>();
+        someEmbeddedList.add(new Person());
+        someEmbeddedList.add(new Person());
+        model.setSomeEmbeddedList(someEmbeddedList);
+
+        Set<Object> someEmbeddedSet = new HashSet<>();
+        someEmbeddedSet.add(12);
+        someEmbeddedSet.add(15);
+        someEmbeddedSet.add(20);
+        model.setSomeEmbeddedSet(someEmbeddedSet);
+
+        /*
+            private String someString;
+    private byte someByte;
+    private short someShort;
+    private int someInteger;
+    private long someLong;
+    private float someFloat;
+    private double someDouble;
+    private BigDecimal someDecimal;
+    private boolean someBoolean;
+    private Date someDate;
+    private byte[] someBinary;
+
+    // embedded types (Objects must be convertable to ODocument, e.g. the must be models?
+    // embedded objects must not have a RID or uiid, the are only accessable via the outer model
+    private Object someEmbeddedObject;
+    private List<Object> someEmbeddedList;
+    private Set<Object> someEmbeddedSet;
+    private Map<String, Object> someEmbeddedMap;
+         */
+
+        EKBCommit commit = new EKBCommitImpl();
+        commit.addOperation(new Operation(OperationType.INSERT, model));
+
+        OpenEngSBModel openEngSBModel = commit.getOperations(OperationType.INSERT).get(0).getModel();
+        for (OpenEngSBModelEntry entry : openEngSBModel.toOpenEngSBModelValues()) {
+
+            System.out.println(entry.getKey() + ":   " + entry.getValue());
+
+            if (entry.getType() == List.class) {
+                for (Object o : (List<?>) entry.getValue()) {
+                    OpenEngSBModel model2 = (OpenEngSBModel)o;
+                    System.out.println("   " + model2);
+                }
+            }
+        }
+    }
+
     private static void createDatabaseAndSchema() throws IOException {
         OrientDBHelper.getDefault().createOrOverwriteDatabase();
         OrientGraphNoTx database = OrientDBHelper.getDefault().getConnectionNoTx();
@@ -138,5 +210,7 @@ public class EKBServiceOrientDBTests {
         activities[1].setDesciption("Activity 02");
         activities[2].setDesciption("Activity 03");
     }
+
+
 
 }
