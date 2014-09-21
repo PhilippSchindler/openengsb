@@ -45,25 +45,27 @@ public class EKBServiceOrientDB {
         List<Operation> insertOperations = ekbCommit.getOperations(OperationType.INSERT);
         List<Operation> insertRelationshipOperations = ekbCommit.getOperations(OperationType.INSERT_RELATIONSHIP);
 
-        for (Operation operation : insertOperations) {
-            v_inserted.add(performInsertOperation(operation, v_commit));
-        }
 
-        for (Operation operation : ekbCommit.getOperations(OperationType.UPDATE)) {
-            performUpdateOperation(operation, v_commit);
+        for (Operation operation : ekbCommit.getOperations(OperationType.DELETE_RELATIONSHIP)) {
+            performRelationshipDeleteOperation(operation, v_commit);
         }
 
         for (Operation operation : ekbCommit.getOperations(OperationType.DELETE)) {
             performDeleteOperation(operation, v_commit);
         }
 
+        for (Operation operation : insertOperations) {
+            v_inserted.add(performInsertOperation(operation, v_commit));
+        }
+
         for (Operation operation : insertRelationshipOperations) {
             v_insertedRelationships.add(performRelationshipInsertOperation(operation, v_commit));
         }
 
-        for (Operation operation : ekbCommit.getOperations(OperationType.DELETE_RELATIONSHIP)) {
-            performRelationshipDeleteOperation(operation, v_commit);
+        for (Operation operation : ekbCommit.getOperations(OperationType.UPDATE)) {
+            performUpdateOperation(operation, v_commit);
         }
+
 
         v_commit.save();
         database.commit();
@@ -126,12 +128,26 @@ public class EKBServiceOrientDB {
         ODocument v_prev_revision = v_history.field("last");
 
         // update the fields for the new current version
-        v_entity.clear();
+        clearCurrentDataProperties(v_entity);
         v_entity.fields(extractProperties(model));
         v_entity.field("commit", v_commit);
-        v_entity.field("history", v_history);
 
         // update the fields for the new revision
+        v_entity.copyTo(v_revision);
+
+        // if there are relationships with v_entity, the links from the relationship to the new revision must be created
+        for (Link link : getLinks(v_entity)) {
+            ODocument e_current = link.getTarget();
+            ODocument e_revision = e_current.field("revision");
+            for (Link link2 : getLinks(e_current)) {
+                if (link2.getTarget() == v_entity) {
+                    // this is a link from the current relationship back to the current entity
+                    // this link must be copied for the new revision
+                    createDataLink(e_revision, link2.getName(), v_revision);
+                }
+            }
+        }
+
         v_revision.fields(extractProperties(model));
         v_revision.field("commit", v_commit);
         v_revision.field("history", v_history);
@@ -146,8 +162,6 @@ public class EKBServiceOrientDB {
         v_history.save();
         v_revision.save();
         v_prev_revision.save();
-
-        // TODO check if relationships should be inherited here and create/update them
     }
 
     private void performDeleteOperation(Operation operation, ODocument v_commit) {
@@ -160,12 +174,36 @@ public class EKBServiceOrientDB {
         v_history.field("archived", true);
         v_history.field("deleteBy", v_commit);
         v_history.field("current", (ODocument)null);
+        v_history.save();
+
+        for (Link v_entity_link : getLinks(v_entity)) {
+            // target of link is a relationship vertex which should be removed
+
+            // update lastRevision of this relationship - set deletedBy property to this commit
+            ODocument e_lastRevision = v_entity_link.getTarget().field("revision");
+            e_lastRevision.field("deleteBy", v_commit);
+            e_lastRevision.save();
+
+            // update nodes linked to this relationship - delete all links to this relationship vertex
+            for (Link e_current_link : getLinks(v_entity_link.getTarget())) {
+                if (e_current_link.getTarget() !=  v_entity) {
+                    // the target vertex is not the one we want to delete so just the links are removed
+                    ODocument v_related = e_current_link.getTarget();
+                    Object v_related_link = v_related.field(v_entity_link.getName());
+                    if (v_related_link instanceof ODocument)
+                        v_related.removeField(v_entity_link.getName());
+                    else
+                        ((List<ODocument>)v_related_link).remove(v_entity_link.getTarget());
+                    v_related.save();
+                }
+            }
+
+            // delete relationship node
+            v_entity_link.getTarget().delete();
+        }
 
         // drop current version
         v_entity.delete();
-
-        v_history.save();
-        // TODO handle relationships
     }
 
     private ODocument performRelationshipInsertOperation(Operation operation, ODocument v_commit) {
@@ -212,23 +250,13 @@ public class EKBServiceOrientDB {
         for (String linkName : e_current.fieldNames()) {
             if (!linkName.equals("revision") && !linkName.equals("commit")) {
                 ODocument v_related = e_current.field(linkName);
-                Object field = v_related.field(relationship.getName());
-
-                if (field instanceof List<?>) {
-                    List<ODocument> links = (List<ODocument>) field;
-                    links.remove(e_current);
-                }
-                else {
-                    v_related.removeField(relationship.getName());
-                }
-
+                deleteDataLink(v_related, relationship.getName(), e_current);
                 v_related.save();
             }
         }
 
         e_revision.field("deletedBy", v_commit);
         e_revision.save();
-
         e_current.delete();
     }
 
@@ -253,11 +281,94 @@ public class EKBServiceOrientDB {
         }
     }
 
-
-
     private String getModelClassName(OpenEngSBModel model) {
         return model.getClass().getSimpleName();
     }
+
+
+    private boolean isLink(ODocument doc, String fieldName) {
+        Object field = doc.field(fieldName);
+        if (field instanceof ODocument) {
+            return !((ODocument) field).isEmbedded();
+        }
+        if (field instanceof List<?>) {
+            for (Object target : (List<?>) field) {
+                if (target instanceof ODocument)
+                    return !((ODocument) field).isEmbedded();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private boolean isInternalLinkName(String fieldName) {
+        return fieldName.equals("history") || fieldName.equals("commit") || fieldName.equals("revision");
+    }
+
+    private List<Link> getLinks(ODocument doc) {
+        List<Link> links = new ArrayList<>();
+        for (String fieldName : doc.fieldNames()) {
+            if (!isInternalLinkName(fieldName)) {
+                Object field = doc.field(fieldName);
+                if (field instanceof ODocument) {
+                    links.add(new Link(fieldName, (ODocument) doc.field(fieldName)));
+                }
+                else if (field instanceof List<?>) {
+                    for (Object target : (List<?>) field) {
+                        if (!(target instanceof ODocument))
+                            break;
+                        links.add(new Link(fieldName, (ODocument) target));
+                    }
+                }
+            }
+        }
+        return links;
+    }
+
+
+    private void createDataLink(ODocument linkStorage, String linkName, ODocument linkTarget) {
+        if (isLink(linkStorage, linkName)) {
+            // link with this name already exists
+            Object existing = linkStorage.field(linkName);
+            if (existing instanceof ODocument) {
+                // there is just one link already stored - so we need to create a list for this one and the new one
+                List<ODocument> links = new ArrayList<>();
+                links.add((ODocument)existing);
+                links.add(linkTarget);
+            }
+            else {
+                // there are at least two links already stored, so we just add the new one to the list
+                ((List<ODocument>)existing).add(linkTarget);
+            }
+        }
+        else {
+            // create the new first link as property
+            linkStorage.field(linkName, linkTarget);
+        }
+    }
+
+    private void deleteDataLink(ODocument linkStorage, String linkName, ODocument linkTarget) {
+        Object linking = linkStorage.field(linkName);
+        if (linking instanceof ODocument) {
+            linkStorage.removeField(linkName);
+        }
+        else {
+            List<ODocument> links = (List<ODocument>)linking;
+            links.remove(linkTarget);
+            if (links.size() == 1)
+                linkStorage.field(linkName, links.get(0));
+        }
+    }
+
+
+    private void clearCurrentDataProperties(ODocument doc) {
+        for (String fieldName : doc.fieldNames()) {
+            if (!isInternalLinkName(fieldName) && !isLink(doc, fieldName)) {
+                doc.removeField(fieldName);
+            }
+        }
+    }
+
 
     private ORID getRID(OpenEngSBModel model) {
         List<OpenEngSBModelEntry> entries = model.toOpenEngSBModelValues();
@@ -287,10 +398,6 @@ public class EKBServiceOrientDB {
 
 
 
-
-
-
-
     private Map<String, Object> extractProperties(OpenEngSBModel model) {
         Map<String, Object> properties = new HashMap<>();
         for (OpenEngSBModelEntry entry : model.toOpenEngSBModelValues()) {
@@ -306,7 +413,6 @@ public class EKBServiceOrientDB {
         }
         return properties;
     }
-
 
     private ODocument createCommitVertex(EKBCommit commit, Date timestamp, ODocument v_parentCommit) {
         ODocument v_commit = database.newInstance("Commit");
@@ -330,6 +436,9 @@ public class EKBServiceOrientDB {
 
 
 
+    private void convertModelToDocument(OpenEngSBModel model, ODocument document) {
+        // TODO recursive mapping from model to document
+    }
 
 
 
