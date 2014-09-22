@@ -1,7 +1,7 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,11 +11,9 @@ import org.openengsb.core.api.model.OpenEngSBModel;
 import org.openengsb.core.api.model.OpenEngSBModelEntry;
 import org.openengsb.framework.ekb.persistence.orientdb.models.*;
 import org.openengsb.framework.ekb.persistence.orientdb.visualization.DotExporter;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
-
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -26,6 +24,7 @@ import static org.junit.Assert.assertEquals;
 public class EKBServiceOrientDBTests {
 
     private static EKBServiceOrientDB service;
+    public static final boolean DO_GRAPHICAL_EXPORT = true;
 
     static Person[] persons;
     static Activity[] activities;
@@ -40,7 +39,7 @@ public class EKBServiceOrientDBTests {
     @After
     public void cleanUp() {
         // maybe drop database here (not doing because it's automatically recreated in setUp
-        service.getDatabase().shutdown();
+        service.getDatabase().close();
     }
 
     // old test
@@ -94,7 +93,7 @@ public class EKBServiceOrientDBTests {
         c8.addOperation(new Operation(OperationType.DELETE, persons[1]));
         service.commit(c8);
 
-        DotExporter.export(service.getDatabase().getRawGraph(), "C:\\Users\\sp\\db.dot", "PersonHistory", "ActivityHistory");
+        DotExporter.export(service.getDatabase(), "C:\\Users\\sp\\db.dot", "PersonHistory", "ActivityHistory");
     }
 
     @Test
@@ -148,7 +147,7 @@ public class EKBServiceOrientDBTests {
 
     private static void createDatabaseAndSchema() throws IOException {
         OrientDBHelper.getDefault().createOrOverwriteDatabase();
-        OrientGraphNoTx database = OrientDBHelper.getDefault().getConnectionNoTx();
+        ODatabaseDocument database = OrientDBHelper.getDefault().getConnectionNoTx();
 
         SchemaGenerator generator = new SchemaGenerator();
         generator.setDatabase(database);
@@ -159,11 +158,13 @@ public class EKBServiceOrientDBTests {
         generator.addModel(Person.class);
         generator.addModel(Manager.class);  // manager must be added after person due to inheritance
 
-        database.shutdown();
+        database.close();
     }
 
     private void export(String name, String... classes) {
-        DotExporter.export(service.getDatabase().getRawGraph(), "C:\\Users\\sp\\Desktop\\dotexport\\" + name + ".dot", classes );
+        if (DO_GRAPHICAL_EXPORT)
+            DotExporter.export(service.getDatabase(),
+                    "C:\\Users\\sp\\Desktop\\dotexport\\" + name + ".dot", classes );
     }
 
     private List<ODocument> query(String orientSql) {
@@ -221,7 +222,9 @@ public class EKBServiceOrientDBTests {
     private EKBCommit createCommit() {
         return new EKBCommitImpl();
     }
-
+    private Relationship createRelationship(String name, Object... relatedModels) {
+        return new RelationshipImpl(name, relatedModels);
+    }
 
 
     @Test
@@ -284,6 +287,160 @@ public class EKBServiceOrientDBTests {
         assertEquals(1, query("select from Revision").size());
 
         export("basicDelete");
+    }
+
+
+    @Test
+    public void testCommit_shouldInsertRelationship() {
+
+        Person p0 = createTestPerson(0);
+        Activity a0 = createTestActivity(0);
+        Relationship r0 = createRelationship("performs", p0, a0);
+
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        c1.addOperation(new Operation(OperationType.INSERT, a0));
+        c1.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r0));
+        service.commit(c1);
+
+        // one for the revision and one for the current
+        assertEquals(2, query("select from Relationship").size());
+
+        export("insertRelationship");
+    }
+
+    @Test
+    public void testCommit_shouldDropRelationship() {
+
+        Person p0 = createTestPerson(0);
+        Activity a0 = createTestActivity(0);
+        Relationship r0 = createRelationship("performs", p0, a0);
+
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        c1.addOperation(new Operation(OperationType.INSERT, a0));
+        c1.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r0));
+        service.commit(c1);
+
+        EKBCommit c2 = createCommit();
+        c2.addOperation(new Operation(OperationType.DELETE_RELATIONSHIP, r0));
+        service.commit(c2);
+
+        // one for the revision
+        assertEquals(1, query("select from Relationship").size());
+
+        export("deleteRelationship");
+    }
+
+
+
+    @Test
+    public void testCommit_relationshipShouldBehaveCorrectOnUpdateOfRelatedModels() {
+
+        Person p0 = createTestPerson(0);
+        Activity a0 = createTestActivity(0);
+        Relationship r0 = createRelationship("performs", p0, a0);
+
+        // 1st commit - no relationship here
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        c1.addOperation(new Operation(OperationType.INSERT, a0));
+        service.commit(c1);
+
+        // 2nd commit - both related nodes are updated
+        // nodes should be related now
+        p0.setPassword("newPassword1");
+        a0.setExpectedDuration(a0.getExpectedDuration() + 10);
+        EKBCommit c2 = createCommit();
+        c2.addOperation(new Operation(OperationType.UPDATE, p0));
+        c2.addOperation(new Operation(OperationType.UPDATE, a0));
+        c2.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r0));
+        service.commit(c2);
+
+        // 3rd commit - activity is updated again
+        // nodes should still be related
+        a0.setExpectedDuration(a0.getExpectedDuration() + 10);
+        EKBCommit c3 = createCommit();
+        c3.addOperation(new Operation(OperationType.UPDATE, a0));
+        service.commit(c3);
+
+        // one for the revisions and one for the current version
+        assertEquals(2, query("select from Relationship").size());
+
+        export("complexRelationshipInsertBehaviour");
+    }
+
+    @Test
+    public void testCommit_relationshipShouldBehaveCorrectOnUpdateOfRelatedModelsAndDelete() {
+        // like the previous testcase
+        // additionally deletes the relationship in the end and updates the activity again
+        // so the last activity revision should not be related to the person
+
+        Person p0 = createTestPerson(0);
+        Activity a0 = createTestActivity(0);
+        Relationship r0 = createRelationship("performs", p0, a0);
+
+        // 1st commit - no relationship here
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        c1.addOperation(new Operation(OperationType.INSERT, a0));
+        service.commit(c1);
+
+        // 2nd commit - both related nodes are updated
+        // nodes should be related now
+        p0.setPassword("newPassword1");
+        a0.setExpectedDuration(a0.getExpectedDuration() + 10);
+        EKBCommit c2 = createCommit();
+        c2.addOperation(new Operation(OperationType.UPDATE, p0));
+        c2.addOperation(new Operation(OperationType.UPDATE, a0));
+        c2.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r0));
+        service.commit(c2);
+
+        // 3rd commit - activity is updated again
+        // nodes should still be related
+        a0.setExpectedDuration(a0.getExpectedDuration() + 10);
+        EKBCommit c3 = createCommit();
+        c3.addOperation(new Operation(OperationType.UPDATE, a0));
+        service.commit(c3);
+
+        // end of previous testcase here
+
+        a0.setExpectedDuration(a0.getExpectedDuration() + 10);
+        EKBCommit c4 = createCommit();
+        c4.addOperation(new Operation(OperationType.UPDATE, a0));
+        c4.addOperation(new Operation(OperationType.DELETE_RELATIONSHIP, r0));
+        service.commit(c4);
+
+        // one for the revisions
+        assertEquals(1, query("select from Relationship").size());
+
+        export("complexRelationshipInsertBehaviourWithDelete");
+    }
+
+
+    @Test
+    public void testCommit_relationshipShouldBeDeletedAfterRelatedModelIsDeleted() {
+        // if we delete a model all relationships with this model must be archived as well
+        // however the deletion is not cascaded - so related model are not deleted
+
+        Person p0 = createTestPerson(0);
+        Activity a0 = createTestActivity(0);
+        Relationship r0 = createRelationship("performs", p0, a0);
+
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        c1.addOperation(new Operation(OperationType.INSERT, a0));
+        c1.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r0));
+        service.commit(c1);
+
+        EKBCommit c2 = createCommit();
+        c2.addOperation(new Operation(OperationType.DELETE, a0));
+        service.commit(c2);
+
+        // one for the revisions
+        assertEquals(1, query("select from Relationship").size());
+
+        export("relationshipBehavourOnDeleleOfRelatedModel");
     }
 
 

@@ -4,8 +4,9 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.metadata.schema.OType;
+import com.orientechnologies.orient.core.query.OQuery;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.tinkerpop.blueprints.impls.orient.OrientGraph;
+import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import org.openengsb.core.api.model.OpenEngSBModel;
 import org.openengsb.core.api.model.OpenEngSBModelEntry;
 import org.openengsb.core.ekb.api.Query;
@@ -22,72 +23,43 @@ import java.util.*;
 
 public class EKBServiceOrientDB {
 
-    OrientGraph graph;
-    ODatabaseDocumentTx database;
+    private ODatabaseDocumentTx database;
 
-    public OrientGraph getDatabase() {
-        return graph;
+    // stores loaded current instances of documents required for a single commit
+    // cleared at the start of each commit
+    // so only a single database.load operation is needed per model for a commit
+    // also allows for insert relationships between inserted nodes of the same commit (which get there RID after the
+    // transaction is excecuted)
+    private Map<OpenEngSBModel, ODocument> cachedDocuments;
+
+    // if enabled, generated RIDs will be stored back into the models after a commit
+    private boolean isRIDSupportEnabled = true;
+
+
+
+    public ODatabaseDocumentTx getDatabase() {
+        return database;
     }
 
-    public void setDatabase(OrientGraph database) {
-        this.graph = database;
-        this.database = graph.getRawGraph();
+    public void setDatabase(ODatabaseDocumentTx database) {
+        this.database = database;
     }
 
-    //@Override
-    public void commit(EKBCommit ekbCommit) {
-
-        Date timestamp = new Date();
-        ODocument v_commit = createCommitVertex(ekbCommit, timestamp, null);
-
-        List<ODocument> v_inserted = new ArrayList<>();
-        List<ODocument> v_insertedRelationships = new ArrayList<>();
-        List<Operation> insertOperations = ekbCommit.getOperations(OperationType.INSERT);
-        List<Operation> insertRelationshipOperations = ekbCommit.getOperations(OperationType.INSERT_RELATIONSHIP);
-
-
-        for (Operation operation : ekbCommit.getOperations(OperationType.DELETE_RELATIONSHIP)) {
-            performRelationshipDeleteOperation(operation, v_commit);
-        }
-
-        for (Operation operation : ekbCommit.getOperations(OperationType.DELETE)) {
-            performDeleteOperation(operation, v_commit);
-        }
-
-        for (Operation operation : insertOperations) {
-            v_inserted.add(performInsertOperation(operation, v_commit));
-        }
-
-        for (Operation operation : insertRelationshipOperations) {
-            v_insertedRelationships.add(performRelationshipInsertOperation(operation, v_commit));
-        }
-
-        for (Operation operation : ekbCommit.getOperations(OperationType.UPDATE)) {
-            performUpdateOperation(operation, v_commit);
-        }
-
-
-        v_commit.save();
-        database.commit();
-
-        // store rid's back for future updates/deletes
-        int i = 0;
-        for (Operation operation : insertOperations) {
-            setRID(operation.getModel(), v_inserted.get(i).getIdentity());
-            i++;
-        }
-        i = 0;
-        for (Operation operation : insertRelationshipOperations) {
-            setRID(operation.getModel(), v_insertedRelationships.get(i).getIdentity());
-            i++;
-        }
+    public boolean isRidSupportEnabled() {
+        return isRIDSupportEnabled;
     }
+
+    public void setRidSupportEnabled(boolean isRIDSupportEnabled) {
+        this.isRIDSupportEnabled = isRIDSupportEnabled;
+    }
+
 
 
     private ODocument performInsertOperation(Operation operation, ODocument v_commit) {
         OpenEngSBModel model = operation.getModel();
 
         ODocument v_entity = database.newInstance(getModelClassName(model));
+        cachedDocuments.put(model, v_entity);
         ODocument v_history = database.newInstance(getModelClassName(model) + "History");
         ODocument v_revision = database.newInstance("Revision");
 
@@ -122,7 +94,7 @@ public class EKBServiceOrientDB {
     private void performUpdateOperation(Operation operation, ODocument v_commit) {
         OpenEngSBModel model = operation.getModel();
 
-        ODocument v_entity = database.load(getRID(model));
+        ODocument v_entity = loadCurrentDocumentForModel(model);
         ODocument v_revision = database.newInstance("Revision");
         ODocument v_history  = v_entity.field("history");
         ODocument v_prev_revision = v_history.field("last");
@@ -141,11 +113,22 @@ public class EKBServiceOrientDB {
         for (Link link : getLinks(v_entity)) {
             ODocument e_current = link.getTarget();
             ODocument e_revision = e_current.field("revision");
+
+            // we have a like from the current version to the relationship node
+            // the revision must have the same link to the revision node of the relationship
+            createDataLink(v_revision, link.getName(), e_revision);
+
             for (Link link2 : getLinks(e_current)) {
                 if (link2.getTarget() == v_entity) {
                     // this is a link from the current relationship back to the current entity
                     // this link must be copied for the new revision
-                    createDataLink(e_revision, link2.getName(), v_revision);
+                    // so we overwrite the current last revision with the new revision
+                    e_revision.field(link2.getName(), v_revision);
+
+                    // and add the new revision to the list of all revisions
+                    // TODO additional schema info is required here if the names are not in the form of
+                    // e.g. person (to get recent revision) and personRevisions (to get all related revisions)
+                    ((List<ODocument>)e_revision.field(link2.getName() + "Revisions")).add(v_revision);
                 }
             }
         }
@@ -165,7 +148,7 @@ public class EKBServiceOrientDB {
     private void performDeleteOperation(Operation operation, ODocument v_commit) {
         OpenEngSBModel model = operation.getModel();
 
-        ODocument v_entity = database.load(getRID(model));
+        ODocument v_entity = loadCurrentDocumentForModel(model);
         ODocument v_history  = v_entity.field("history");
 
         // update history
@@ -182,22 +165,19 @@ public class EKBServiceOrientDB {
             e_lastRevision.field("deleteBy", v_commit);
             e_lastRevision.save();
 
+            ODocument e_current = v_entity_link.getTarget();
+
             // update nodes linked to this relationship - delete all links to this relationship vertex
-            for (Link e_current_link : getLinks(v_entity_link.getTarget())) {
+            for (Link e_current_link : getLinks(e_current)) {
                 if (e_current_link.getTarget() !=  v_entity) {
                     // the target vertex is not the one we want to delete so just the links are removed
                     ODocument v_related = e_current_link.getTarget();
-                    Object v_related_link = v_related.field(v_entity_link.getName());
-                    if (v_related_link instanceof ODocument)
-                        v_related.removeField(v_entity_link.getName());
-                    else
-                        ((List<ODocument>)v_related_link).remove(v_entity_link.getTarget());
-                    v_related.save();
+                    deleteDataLink(v_related, v_entity_link.getName(), e_current);
                 }
             }
 
             // delete relationship node
-            v_entity_link.getTarget().delete();
+            e_current.delete();
         }
 
         // drop current version
@@ -216,7 +196,7 @@ public class EKBServiceOrientDB {
         e_revision.field("createdBy", v_commit);
 
         for (OpenEngSBModel relatedModel : relationship.getRelatedModels()) {
-            ODocument v_related_current = database.load(getRID(relatedModel));
+            ODocument v_related_current = loadCurrentDocumentForModel(relatedModel);
             ODocument v_related_lastRevision = ((ODocument)v_related_current.field("history")).field("last");
             updateRelationshipProperty(v_related_current, e_current, relatedModel, relationship);
             updateRelationshipProperty(v_related_lastRevision, e_revision, relatedModel, relationship);
@@ -242,7 +222,7 @@ public class EKBServiceOrientDB {
         OpenEngSBModel model = operation.getModel();
         Relationship relationship = (Relationship) model;
 
-        ODocument e_current = database.load(getRID(model));
+        ODocument e_current = loadCurrentDocumentForModel(model);
         ODocument e_revision = e_current.field("revision");
 
         for (String linkName : e_current.fieldNames()) {
@@ -279,10 +259,138 @@ public class EKBServiceOrientDB {
         }
     }
 
+
+
+    private void initDocumentCache() {
+        if (cachedDocuments == null) {
+            cachedDocuments = new HashMap<>();
+        }
+        cachedDocuments.clear();
+    }
+
+    private void storeGeneratedRIDsBack(EKBCommit commit, List<ODocument> insertedModels,
+                                        List<ODocument> insertedRelationships) {
+        if (isRIDSupportEnabled) {
+            // store rid's back for future updates/deletes
+            int i = 0;
+            for (Operation operation : commit.getOperations(OperationType.INSERT)) {
+                setRID(operation.getModel(), insertedModels.get(i).getIdentity());
+                i++;
+            }
+            i = 0;
+            for (Operation operation : commit.getOperations(OperationType.INSERT_RELATIONSHIP)) {
+                setRID(operation.getModel(), insertedRelationships.get(i).getIdentity());
+                i++;
+            }
+        }
+    }
+
+    private Map<String, Object> extractProperties(OpenEngSBModel model) {
+        Map<String, Object> properties = new HashMap<>();
+        for (OpenEngSBModelEntry entry : model.toOpenEngSBModelValues()) {
+            if (entry.getValue() != null && !entry.getKey().equals("RID")) {
+                if (OType.getTypeByClass(entry.getType()) == null) {
+                    throw new IllegalArgumentException("Invalid model - some properties of this model cannot be " +
+                            "persisted!");
+                }
+                else {
+                    properties.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        return properties;
+    }
+
+    private void convertModelToDocument(OpenEngSBModel model, ODocument document) {
+        // TODO implement recursive mapping from model to document
+    }
+
+    private ODocument loadCurrentDocumentForModel(OpenEngSBModel model) {
+        // check if this model was already accessed in the current commit
+        // if yes return the known instance
+        ODocument cachedDocument = cachedDocuments.get(model);
+        if (cachedDocument != null)
+            return cachedDocument;
+
+        // if the model has an RID, fast load it by it's RID
+        ORID rid = getRID(model);
+        if (rid != null) {
+            ODocument loadedDocument = database.load(rid);
+            cachedDocuments.put(model, loadedDocument);
+            return loadedDocument;
+        }
+
+        // otherwise load it buy it's UIID (hash index-lookup), slower should still be O(1)
+        // not implemented
+        throw new IllegalArgumentException("Unable to load the model. No RID available!");
+    }
+
+    private ODocument createCommitVertex(EKBCommit commit, Date timestamp, ODocument v_parentCommit) {
+        ODocument v_commit = database.newInstance("Commit");
+
+        v_commit.field("timestamp", timestamp);
+        v_commit.field("domainId", commit.getDomainId());
+        v_commit.field("connectorId", commit.getConnectorId());
+        v_commit.field("instanceId", commit.getInstanceId());
+        v_commit.field("comment", commit.getComment());
+        v_commit.field("revisionNumber", commit.getRevisionNumber());
+
+        if (v_parentCommit != null) {
+            v_commit.field("parentRevisionNumber", v_parentCommit.field("revisionNumber"));
+            v_commit.field("parent", v_parentCommit);
+            v_parentCommit.field("next", v_commit);
+        }
+
+        return v_commit;
+    }
+
+    private void createDataLink(ODocument linkStorage, String linkName, ODocument linkTarget) {
+        if (isLink(linkStorage, linkName)) {
+            // link with this name already exists
+            Object existing = linkStorage.field(linkName);
+            if (existing instanceof ODocument) {
+                // there is just one link already stored - so we need to create a list for this one and the new one
+                List<ODocument> links = new ArrayList<>();
+                links.add((ODocument)existing);
+                links.add(linkTarget);
+            }
+            else {
+                // there are at least two links already stored, so we just add the new one to the list
+                ((List<ODocument>)existing).add(linkTarget);
+            }
+        }
+        else {
+            // create the new first link as property
+            linkStorage.field(linkName, linkTarget);
+        }
+    }
+
+    private void deleteDataLink(ODocument linkStorage, String linkName, ODocument linkTarget) {
+        Object linking = linkStorage.field(linkName);
+        if (linking instanceof ODocument) {
+            linkStorage.removeField(linkName);
+        }
+        else {
+            List<ODocument> links = (List<ODocument>)linking;
+            links.remove(linkTarget);
+            if (links.size() == 1)
+                linkStorage.field(linkName, links.get(0));
+        }
+    }
+
+    private void clearCurrentDataProperties(ODocument doc) {
+        for (String fieldName : doc.fieldNames()) {
+            if (!isInternalLinkName(fieldName) && !isLink(doc, fieldName)) {
+                doc.removeField(fieldName);
+            }
+        }
+    }
+
+
+
     private String getModelClassName(OpenEngSBModel model) {
         return model.getClass().getSimpleName();
     }
-
 
     private boolean isLink(ODocument doc, String fieldName) {
         Object field = doc.field(fieldName);
@@ -323,62 +431,17 @@ public class EKBServiceOrientDB {
         return links;
     }
 
-
-    private void createDataLink(ODocument linkStorage, String linkName, ODocument linkTarget) {
-        if (isLink(linkStorage, linkName)) {
-            // link with this name already exists
-            Object existing = linkStorage.field(linkName);
-            if (existing instanceof ODocument) {
-                // there is just one link already stored - so we need to create a list for this one and the new one
-                List<ODocument> links = new ArrayList<>();
-                links.add((ODocument)existing);
-                links.add(linkTarget);
-            }
-            else {
-                // there are at least two links already stored, so we just add the new one to the list
-                ((List<ODocument>)existing).add(linkTarget);
-            }
-        }
-        else {
-            // create the new first link as property
-            linkStorage.field(linkName, linkTarget);
-        }
-    }
-
-    private void deleteDataLink(ODocument linkStorage, String linkName, ODocument linkTarget) {
-        Object linking = linkStorage.field(linkName);
-        if (linking instanceof ODocument) {
-            linkStorage.removeField(linkName);
-        }
-        else {
-            List<ODocument> links = (List<ODocument>)linking;
-            links.remove(linkTarget);
-            if (links.size() == 1)
-                linkStorage.field(linkName, links.get(0));
-        }
-    }
-
-
-    private void clearCurrentDataProperties(ODocument doc) {
-        for (String fieldName : doc.fieldNames()) {
-            if (!isInternalLinkName(fieldName) && !isLink(doc, fieldName)) {
-                doc.removeField(fieldName);
-            }
-        }
-    }
-
-
     private ORID getRID(OpenEngSBModel model) {
         List<OpenEngSBModelEntry> entries = model.toOpenEngSBModelValues();
         for (OpenEngSBModelEntry entry : entries) {
             if (entry.getKey().equals("RID")) {
                 if (entry.getValue() == null) {
-                    throw new IllegalArgumentException("RID of model not set!");
+                    return null;
                 }
                 return new ORecordId((String) entry.getValue());
             }
         }
-        throw new IllegalArgumentException("RID of model not set!");
+        return null;
     }
 
     private void setRID(OpenEngSBModel model, ORID rid) {
@@ -396,120 +459,93 @@ public class EKBServiceOrientDB {
 
 
 
-    private Map<String, Object> extractProperties(OpenEngSBModel model) {
-        Map<String, Object> properties = new HashMap<>();
-        for (OpenEngSBModelEntry entry : model.toOpenEngSBModelValues()) {
-            if (entry.getValue() != null && !entry.getKey().equals("RID")) {
-                if (OType.getTypeByClass(entry.getType()) == null) {
-                    throw new IllegalArgumentException("Invalid model - some properties of this model cannot be " +
-                                                       "persisted!");
-                }
-                else {
-                    properties.put(entry.getKey(), entry.getValue());
-                }
-            }
-        }
-        return properties;
-    }
 
-    private ODocument createCommitVertex(EKBCommit commit, Date timestamp, ODocument v_parentCommit) {
-        ODocument v_commit = database.newInstance("Commit");
+    //@Override
+    public void commit(EKBCommit ekbCommit) {
 
-        v_commit.field("timestamp", timestamp);
-        v_commit.field("domainId", commit.getDomainId());
-        v_commit.field("connectorId", commit.getConnectorId());
-        v_commit.field("instanceId", commit.getInstanceId());
-        v_commit.field("comment", commit.getComment());
-        v_commit.field("revisionNumber", commit.getRevisionNumber());
+        Date timestamp = new Date();
+        ODocument v_commit = createCommitVertex(ekbCommit, timestamp, null);
 
-        if (v_parentCommit != null) {
-            v_commit.field("parentRevisionNumber", v_parentCommit.field("revisionNumber"));
-            v_commit.field("parent", v_parentCommit);
-            v_parentCommit.field("next", v_commit);
+        List<ODocument> v_inserted = new ArrayList<>();
+        List<ODocument> v_insertedRelationships = new ArrayList<>();
+        List<Operation> insertOperations = ekbCommit.getOperations(OperationType.INSERT);
+        List<Operation> insertRelationshipOperations = ekbCommit.getOperations(OperationType.INSERT_RELATIONSHIP);
+
+        initDocumentCache();
+
+        for (Operation operation : ekbCommit.getOperations(OperationType.DELETE_RELATIONSHIP)) {
+            performRelationshipDeleteOperation(operation, v_commit);
         }
 
-        return v_commit;
+        for (Operation operation : ekbCommit.getOperations(OperationType.DELETE)) {
+            performDeleteOperation(operation, v_commit);
+        }
+
+        for (Operation operation : ekbCommit.getOperations(OperationType.UPDATE)) {
+            performUpdateOperation(operation, v_commit);
+        }
+
+        for (Operation operation : insertOperations) {
+            v_inserted.add(performInsertOperation(operation, v_commit));
+        }
+
+        for (Operation operation : insertRelationshipOperations) {
+            v_insertedRelationships.add(performRelationshipInsertOperation(operation, v_commit));
+        }
+
+        v_commit.save();
+        database.commit();
+
+        storeGeneratedRIDsBack(ekbCommit, v_inserted, v_insertedRelationships);
     }
-
-
-
-
-    private void convertModelToDocument(OpenEngSBModel model, ODocument document) {
-        // TODO recursive mapping from model to document
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     //@Override
     public void commit(EKBCommit ekbCommit, UUID headRevision) {
-
+        throw new UnsupportedOperationException();
     }
 
     //@Override
     public void addTransformation(TransformationDescriptor descriptor) {
-
+        throw new UnsupportedOperationException();
     }
 
     //@Override
     public <T> List<T> query(Query query) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     //@Override
     public Object nativeQuery(Object query) {
-        return null;
+        List<ODocument> result;
+        if (query instanceof String) {
+            result = database.query(new OSQLSynchQuery<ODocument>((String)query));
+        }
+        else if (query instanceof OQuery<?>) {
+            result = database.query((OQuery<?>)query);
+        }
+        else {
+            throw new IllegalArgumentException("Invalid argument query! (use a String or a OQuery instance)");
+        }
+        return result;
     }
 
     //@Override
     public UUID getLastRevisionId() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     // @Override
     public void deleteCommit(UUID headRevision) {
-
+        throw new UnsupportedOperationException();
     }
 
     // @Override
     public EKBCommit loadCommit(UUID revision) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     // @Override
     public <T> T getModel(Class<T> model, String oid) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 }

@@ -4,14 +4,12 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 
 /**
  * Created by Philipp Schindler on 13.09.2014.
  */
 public class SchemaGenerator {
 
-    private OrientGraphNoTx graph;
     private ODatabaseDocument database;
     private OSchema schema;
 
@@ -28,23 +26,20 @@ public class SchemaGenerator {
 
     }
 
-    public SchemaGenerator(OrientGraphNoTx database) {
+    public SchemaGenerator(ODatabaseDocument database) {
         setDatabase(database);
     }
 
-    public OrientGraphNoTx getDatabase() {
-        return graph;
+    public ODatabaseDocument getDatabase() {
+        return database;
     }
 
-    public void setDatabase(OrientGraphNoTx database) {
-        this.graph = database;
-        this.database = database.getRawGraph();
+    public void setDatabase(ODatabaseDocument database) {
+        this.database = database;
     }
 
     public void generateVersioningSchema()
     {
-        // TODO some addtional infos/changes for handling versioning of edges
-
         schema = database.getMetadata().getSchema();
 
         V            = schema.getClass("V");

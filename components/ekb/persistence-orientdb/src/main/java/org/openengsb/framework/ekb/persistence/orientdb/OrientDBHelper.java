@@ -1,9 +1,8 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
 import com.orientechnologies.orient.client.remote.OServerAdmin;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
-import com.tinkerpop.blueprints.impls.orient.OrientGraph;
-import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 
 import java.io.IOException;
 
@@ -87,12 +86,14 @@ public class OrientDBHelper {
         database.close();
     }
 
-    public OrientGraph getConnection() {
-        return new OrientGraph(connectionURL + "/" + databaseName, user, password);
+    public ODatabaseDocumentTx getConnection() {
+        return new ODatabaseDocumentTx(connectionURL + "/" + databaseName)
+            .open(user, password);
     }
 
-    public OrientGraphNoTx getConnectionNoTx() {
-        return new OrientGraphNoTx(connectionURL + "/" + databaseName, user, password);
+    public ODatabaseDocument getConnectionNoTx() {
+        return new ODatabaseDocumentTx (connectionURL + "/" + databaseName)
+                .open(user, password);
     }
 
 
