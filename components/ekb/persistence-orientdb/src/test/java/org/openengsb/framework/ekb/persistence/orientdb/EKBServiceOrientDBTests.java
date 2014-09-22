@@ -1,8 +1,9 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
+import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
@@ -11,11 +12,11 @@ import org.openengsb.core.api.model.OpenEngSBModelEntry;
 import org.openengsb.framework.ekb.persistence.orientdb.models.*;
 import org.openengsb.framework.ekb.persistence.orientdb.visualization.DotExporter;
 
-import java.awt.*;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Created by Philipp Schindler on 14.09.2014.
@@ -24,30 +25,25 @@ import java.util.List;
 @RunWith(MockitoJUnitRunner.class)
 public class EKBServiceOrientDBTests {
 
+    private static EKBServiceOrientDB service;
+
     static Person[] persons;
-    static Manager[] managers;
     static Activity[] activities;
-    static Project[] projects;
 
-    @BeforeClass
-    public static void setUp() throws IOException {
+    @Before
+    public void setUp() throws IOException {
         createDatabaseAndSchema();
-        initializeTestData();
+        service = new EKBServiceOrientDB();
+        service.setDatabase(OrientDBHelper.getDefault().getConnection());
     }
 
-    @AfterClass
-    public static void cleanUp() {
-        // drop database here
-        // currently not doing this because of inspecting of the data with orientdb studio (orientdb gui)
+    @After
+    public void cleanUp() {
+        // maybe drop database here (not doing because it's automatically recreated in setUp
+        service.getDatabase().shutdown();
     }
 
-    @Test
-    public void testAddInsert_shouldInsertModelIntoCommit() {
-        EKBCommit commit = new EKBCommitImpl();
-        commit.addOperation(new Operation(OperationType.INSERT, persons[0]));
-    }
-
-    @Test
+    // old test
     public void testCommit_shouldCreateDataAndVersioningInfos() {
 
         EKBServiceOrientDB service = new EKBServiceOrientDB();
@@ -133,27 +129,6 @@ public class EKBServiceOrientDBTests {
         someEmbeddedSet.add(20);
         model.setSomeEmbeddedSet(someEmbeddedSet);
 
-        /*
-            private String someString;
-    private byte someByte;
-    private short someShort;
-    private int someInteger;
-    private long someLong;
-    private float someFloat;
-    private double someDouble;
-    private BigDecimal someDecimal;
-    private boolean someBoolean;
-    private Date someDate;
-    private byte[] someBinary;
-
-    // embedded types (Objects must be convertable to ODocument, e.g. the must be models?
-    // embedded objects must not have a RID or uiid, the are only accessable via the outer model
-    private Object someEmbeddedObject;
-    private List<Object> someEmbeddedList;
-    private Set<Object> someEmbeddedSet;
-    private Map<String, Object> someEmbeddedMap;
-         */
-
         EKBCommit commit = new EKBCommitImpl();
         commit.addOperation(new Operation(OperationType.INSERT, model));
 
@@ -187,30 +162,129 @@ public class EKBServiceOrientDBTests {
         database.shutdown();
     }
 
-    private static void initializeTestData() {
-        persons = new Person[6];
-        for (int i = 0; i < persons.length; i++ )
-            persons[i] = new Person();
-
-        persons[0].setFullname("Anna");
-        persons[0].setPhoneNumbers(Arrays.asList("012/1000454", "+43555/8996333"));
-
-        persons[1].setFullname("Bernd");
-        persons[2].setFullname("Claus");
-        persons[3].setFullname("Hans");
-        persons[4].setFullname("Georg");
-        persons[5].setFullname("Peter");
-
-
-        activities = new Activity[3];
-        for (int i = 0; i < activities.length; i++ )
-            activities[i] = new Activity();
-
-        activities[0].setDesciption("Activity 01");
-        activities[1].setDesciption("Activity 02");
-        activities[2].setDesciption("Activity 03");
+    private void export(String name, String... classes) {
+        DotExporter.export(service.getDatabase().getRawGraph(), "C:\\Users\\sp\\Desktop\\dotexport\\" + name + ".dot", classes );
     }
 
+    private List<ODocument> query(String orientSql) {
+        return (List<ODocument>)service.nativeQuery(orientSql);
+    }
+
+    private Person createTestPerson(int i) {
+        String[] names = new String[] { "Anna", "Bernd", "Claus", "Hans", "Tina" };
+        String[] passwords = new String[] { "12345", "qwerty", "qwertz", "abc123", "password" };
+        String[] uiids = new String[] { "akjha-askac", "1uiya-hask1", "1212a-45acw", "121ax-12789", "12nk1-mkdhn" };
+
+        List<List<?>> phones = Arrays.asList(
+            null,
+            Arrays.asList(),
+            Arrays.asList("01/23456789"),
+            Arrays.asList("09/87654321", "+43/6641111111"),
+            Arrays.asList("02/200000000", "080000011100", "7788112112")
+        );
+
+        Person person = new Person();
+        person.setFullname(names[i]);
+        person.setPassword(passwords[i]);
+        person.setLogin(names[i].toLowerCase() + "@test.com");
+        person.setPhoneNumbers((List<String>) phones.get(i));
+        person.setUiid(uiids[i]);
+
+        return person;
+    }
+    private Manager createTestManager() {
+        Manager manager = new Manager();
+        manager.setFullname("Gerold Wichtig");
+        manager.setPassword("verygoodpassword");
+        manager.setLogin("gerold@chef.com");
+        manager.setPhoneNumbers(Arrays.asList("01/444444449", "0214442221"));
+        manager.setUiid("12323-12345");
+        manager.setSeniorManager(true);
+        return manager;
+    }
+    private Activity createTestActivity(int i) {
+        String[] desciptions = new String[] { "design engine part 16.1", "evualuate max trust", "contact supplier" };
+        String[] uiids = new String[] { "mncn1-0askl", "hnnkm-1789a", "11212-00144" };
+        int[] durations = new int[] { 45, 0, 2 };
+        int[] expDurations = new int[] { 80, 40, 1 };
+        boolean[] finished = new boolean[] { false, false, true };
+
+        Activity activity = new Activity();
+        activity.setDesciption(desciptions[i]);
+        activity.setUiid(uiids[i]);
+        activity.setDuration(durations[i]);
+        activity.setExpectedDuration(expDurations[i]);
+        activity.setFinished(finished[i]);
+
+        return activity;
+    }
+    private EKBCommit createCommit() {
+        return new EKBCommitImpl();
+    }
+
+
+
+    @Test
+    public void testCommit_shouldInsert5PersonsAndAManager() {
+
+        EKBCommit c1 = createCommit();
+        for (int i = 0; i < 5; i++)
+            c1.addOperation(new Operation(OperationType.INSERT, createTestPerson(i)));
+        c1.addOperation(new Operation(OperationType.INSERT, createTestManager()));
+        service.commit(c1);
+
+        assertEquals(6, query("select from Person").size());
+        assertEquals(1, query("select from Manager").size());
+        assertEquals(6, query("select from PersonHistory").size());
+        assertEquals(1, query("select from ManagerHistory").size());
+        assertEquals(1, query("select from Commit").size());
+        assertEquals(6, query("select from Revision").size());
+
+        export("insert5PersonsAndAManager");
+    }
+
+    @Test
+    public void testCommit_shouldPerformBasicUpdate() {
+
+        Person p0 = createTestPerson(0);
+
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        service.commit(c1);
+
+        p0.setPassword("newPassword");
+        EKBCommit c2 = createCommit();
+        c2.addOperation(new Operation(OperationType.UPDATE, p0));
+        service.commit(c2);
+
+        assertEquals(1, query("select from Person").size());
+        assertEquals(1, query("select from PersonHistory").size());
+        assertEquals(2, query("select from Commit").size());
+        assertEquals(2, query("select from Revision").size());
+
+        export("basicUpdate");
+    }
+
+    @Test
+    public void testCommit_shouldPerformBasicDelete() {
+
+        Person p0 = createTestPerson(0);
+
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        service.commit(c1);
+
+        EKBCommit c2 = createCommit();
+        c2.addOperation(new Operation(OperationType.DELETE, p0));
+        service.commit(c2);
+
+        assertEquals(0, query("select from Person").size());
+        assertEquals(1, query("select from PersonHistory").size());
+        assertEquals(2, query("select from Commit").size());
+        assertEquals(1, query("select from Revision").size());
+
+        export("basicDelete");
+    }
 
 
 }

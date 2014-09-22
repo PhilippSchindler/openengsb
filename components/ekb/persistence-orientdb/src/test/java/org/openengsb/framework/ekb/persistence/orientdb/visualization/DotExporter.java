@@ -24,6 +24,7 @@ public class DotExporter {
         sb.append("splines=true;\n");
         sb.append("epsilon=0.000001;\n");
 
+        if (classes.length == 0) classes = new String[] { "V" };
 
         for (String clazz : classes) {
             for (ODocument doc : database.browseClass(clazz)) {
