@@ -301,9 +301,91 @@ public class EKBServiceOrientDB {
         return properties;
     }
 
-    private void convertModelToDocument(OpenEngSBModel model, ODocument document) {
-        // TODO implement recursive mapping from model to document
+
+    public ODocument convertModel(OpenEngSBModel model, ODocument document) {
+        if (document == null) {
+            document = new ODocument();
+        }
+
+        for (OpenEngSBModelEntry entry : model.toOpenEngSBModelValues()) {
+            // ignore empty properties or id's here
+            if (entry.getValue() == null || entry.getKey().toUpperCase().equals("RID") ||
+                    entry.getKey().toUpperCase().equals("UIID")) {
+                continue;
+            }
+
+            if (entry.getType() == List.class) {
+                document.field(entry.getKey(), convertList((List<?>) entry.getValue()), OType.EMBEDDEDLIST);
+            }
+            else if (entry.getType() == Set.class) {
+                document.field(entry.getKey(), convertSet((Set<?>)entry.getValue()), OType.EMBEDDEDSET);
+            }
+            else if (entry.getType() == Map.class) {
+                document.field(entry.getKey(), convertMap((Map<?,?>)entry.getValue()), OType.EMBEDDEDMAP);
+            }
+            else if (entry.getValue() instanceof OpenEngSBModel) {
+                document.field(entry.getKey(), convertModel((OpenEngSBModel)entry.getValue(), null), OType.EMBEDDED);
+            }
+            else {
+                document.field(entry.getKey(), entry.getValue());
+            }
+        }
+
+        return document;
     }
+
+    public Object convert(Object object) {
+
+
+        if (OType.isSimpleType(object)) {
+            return object;
+        }
+        if (object instanceof OpenEngSBModel) {
+            return convertModel((OpenEngSBModel)object, null);
+        }
+        if (object instanceof List<?>) {
+            return convertList((List<?>)object);
+        }
+        if (object instanceof Set<?>) {
+            return convertSet((Set<?>) object);
+        }
+        if (object instanceof Map<?, ?>) {
+            return convertMap((Map<?, ?>) object);
+        }
+
+        throw new IllegalArgumentException("Cannot convert model to document. Object '"
+                + object.toString() + "' failed!");
+    }
+
+    public List<Object> convertList(List<?> list) {
+        List<Object> converted = new ArrayList<>();
+        for (Object o : list) {
+            converted.add(convert(o));
+        }
+        return converted;
+    }
+
+    public Set<Object> convertSet(Set<?> set) {
+        Set<Object> converted = new HashSet<>();
+        for (Object o : set) {
+            converted.add(convert(o));
+        }
+        return converted;
+    }
+
+    public Map<String, Object> convertMap(Map<?, ?> map) {
+        Map<String, Object> converted = new HashMap<>();
+        for (Map.Entry<?, ?> kvp : map.entrySet()) {
+            if (kvp.getKey() instanceof String) {
+                converted.put((String) kvp.getKey(), convert(kvp.getValue()));
+            } else {
+                throw new IllegalArgumentException("Cannot convert model to document. Map key is not of type String!");
+            }
+        }
+        return converted;
+    }
+
+
 
     private ODocument loadCurrentDocumentForModel(OpenEngSBModel model) {
         // check if this model was already accessed in the current commit
@@ -400,7 +482,7 @@ public class EKBServiceOrientDB {
         if (field instanceof List<?>) {
             for (Object target : (List<?>) field) {
                 if (target instanceof ODocument)
-                    return !((ODocument) field).isEmbedded();
+                    return !((ODocument) target).isEmbedded();
                 return false;
             }
         }

@@ -1,6 +1,7 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
+import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import org.junit.After;
 import org.junit.Before;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 /**
  * Created by Philipp Schindler on 14.09.2014.
@@ -94,55 +96,6 @@ public class EKBServiceOrientDBTests {
         service.commit(c8);
 
         DotExporter.export(service.getDatabase(), "C:\\Users\\sp\\db.dot", "PersonHistory", "ActivityHistory");
-    }
-
-    @Test
-    public void testComplexModel() {
-        ComplexModel model = new ComplexModel();
-
-        model.setSomeString("Hallo Welt");
-        model.setSomeByte((byte) 47);
-        model.setSomeShort((short) 4711);
-        model.setSomeInteger(-1457777);
-        model.setSomeLong(555555555555555L);
-        model.setSomeFloat(47.11f);
-        model.setSomeDouble(47.12);
-        model.setSomeDecimal(new BigDecimal("123456789123456789123456789123456789123456789123456789123456789"));
-        model.setSomeBoolean(true);
-        model.setSomeBinary(new byte[]{1, 2, 4, 8, 16, 32, 64});
-
-        Calendar c = Calendar.getInstance();
-        c.set(2006, 05, 04, 03, 02, 01);
-        model.setSomeDate(c.getTime());
-
-        model.setSomeEmbeddedObject(new StringBuilder());
-
-        List<Object> someEmbeddedList = new ArrayList<>();
-        someEmbeddedList.add(new Person());
-        someEmbeddedList.add(new Person());
-        model.setSomeEmbeddedList(someEmbeddedList);
-
-        Set<Object> someEmbeddedSet = new HashSet<>();
-        someEmbeddedSet.add(12);
-        someEmbeddedSet.add(15);
-        someEmbeddedSet.add(20);
-        model.setSomeEmbeddedSet(someEmbeddedSet);
-
-        EKBCommit commit = new EKBCommitImpl();
-        commit.addOperation(new Operation(OperationType.INSERT, model));
-
-        OpenEngSBModel openEngSBModel = commit.getOperations(OperationType.INSERT).get(0).getModel();
-        for (OpenEngSBModelEntry entry : openEngSBModel.toOpenEngSBModelValues()) {
-
-            System.out.println(entry.getKey() + ":   " + entry.getValue());
-
-            if (entry.getType() == List.class) {
-                for (Object o : (List<?>) entry.getValue()) {
-                    OpenEngSBModel model2 = (OpenEngSBModel)o;
-                    System.out.println("   " + model2);
-                }
-            }
-        }
     }
 
     private static void createDatabaseAndSchema() throws IOException {
@@ -289,7 +242,6 @@ public class EKBServiceOrientDBTests {
         export("basicDelete");
     }
 
-
     @Test
     public void testCommit_shouldInsertRelationship() {
 
@@ -331,8 +283,6 @@ public class EKBServiceOrientDBTests {
 
         export("deleteRelationship");
     }
-
-
 
     @Test
     public void testCommit_relationshipShouldBehaveCorrectOnUpdateOfRelatedModels() {
@@ -417,7 +367,6 @@ public class EKBServiceOrientDBTests {
         export("complexRelationshipInsertBehaviourWithDelete");
     }
 
-
     @Test
     public void testCommit_relationshipShouldBeDeletedAfterRelatedModelIsDeleted() {
         // if we delete a model all relationships with this model must be archived as well
@@ -444,4 +393,87 @@ public class EKBServiceOrientDBTests {
     }
 
 
+    // TODO add tests for multiple relationships from one node to other nodes
+    // like a person performs multiple activities
+
+
+
+    @Test
+    public void testComplexModel() {
+
+        ComplexModel model = prepareComplexModel();
+
+//        EKBCommit commit = new EKBCommitImpl();
+//        commit.addOperation(new Operation(OperationType.INSERT, model));
+
+        assert(OType.isSimpleType(model.getSomeString()));
+        assert(OType.isSimpleType(model.getSomeByte()));
+        assert(OType.isSimpleType(model.getSomeShort()));
+        assert(OType.isSimpleType(model.getSomeInteger()));
+        assert(OType.isSimpleType(model.getSomeLong()));
+        assert(OType.isSimpleType(model.getSomeFloat()));
+        assert(OType.isSimpleType(model.getSomeDouble()));
+        assert(OType.isSimpleType(model.getSomeDecimal()));
+        assert(OType.isSimpleType(model.getSomeBoolean()));
+
+        assertFalse(OType.isSimpleType(model.getSomeEmbeddedObject()));
+        assertFalse(OType.isSimpleType(model.getSomeEmbeddedList()));
+        assertFalse(OType.isSimpleType(model.getSomeEmbeddedSet()));
+        assertFalse(OType.isSimpleType(model.getSomeEmbeddedMap()));
+
+
+        ODocument document = service.getDatabase().newInstance("V");
+        service.convertModel((OpenEngSBModel)model, document);
+
+        document.save();
+        service.getDatabase().commit();
+
+        assertEquals(1, query("select from V").size());
+    }
+
+    private ComplexModel prepareComplexModel() {
+        ComplexModel model = new ComplexModel();
+
+        model.setRID("#12:1");
+        model.setUiid("xaaza-ashka");
+
+        model.setSomeString("Hallo Welt");
+        model.setSomeByte((byte) 47);
+        model.setSomeShort((short) 4711);
+        model.setSomeInteger(-1457777);
+        model.setSomeLong(555555555555555L);
+        model.setSomeFloat(47.11f);
+        model.setSomeDouble(47.12);
+        model.setSomeDecimal(new BigDecimal("123456789123456789123456789123456789123456789123456789123456789"));
+        model.setSomeBoolean(true);
+        model.setSomeBinary(new byte[]{1, 2, 4, 8, 16, 32, 64});
+
+        Calendar c = Calendar.getInstance();
+        c.set(2006, 05, 04, 03, 02, 01);
+        model.setSomeDate(c.getTime());
+
+        model.setSomeEmbeddedObject(createTestActivity(0));
+
+        List<Object> someEmbeddedList = new ArrayList<>();
+        someEmbeddedList.add(createTestPerson(0));
+        someEmbeddedList.add(createTestPerson(1));
+        someEmbeddedList.add(createTestPerson(2));
+        someEmbeddedList.add(createTestPerson(3));
+        someEmbeddedList.add(createTestPerson(4));
+        model.setSomeEmbeddedList(someEmbeddedList);
+
+        Set<Object> someEmbeddedSet = new HashSet<>();
+        someEmbeddedSet.add(12);
+        someEmbeddedSet.add("keine zahl");
+        someEmbeddedSet.add(20);
+        model.setSomeEmbeddedSet(someEmbeddedSet);
+
+        Map<String, Object> someEmbeddedMap = new HashMap<>();
+        someEmbeddedMap.put("city", "Vienna");
+        someEmbeddedMap.put("people", 1500000);
+        someEmbeddedMap.put("someactivity", createTestActivity(1));
+        model.setSomeEmbeddedMap(someEmbeddedMap);
+
+        return model;
+    }
 }

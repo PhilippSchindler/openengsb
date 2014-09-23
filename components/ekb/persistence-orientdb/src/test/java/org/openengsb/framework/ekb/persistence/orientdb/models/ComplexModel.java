@@ -127,7 +127,7 @@ public class ComplexModel {
         this.someDecimal = someDecimal;
     }
 
-    public boolean isSomeBoolean() {
+    public boolean getSomeBoolean() {
         return someBoolean;
     }
 
