@@ -1,5 +1,6 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
+import com.orientechnologies.orient.core.command.script.OCommandScript;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
@@ -21,6 +22,13 @@ public class SchemaGenerator {
     private OClass revision;
     private OClass relationship;
 
+    public ODatabaseDocument getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(ODatabaseDocument database) {
+        this.database = database;
+    }
 
     public SchemaGenerator() {
 
@@ -30,16 +38,7 @@ public class SchemaGenerator {
         setDatabase(database);
     }
 
-    public ODatabaseDocument getDatabase() {
-        return database;
-    }
-
-    public void setDatabase(ODatabaseDocument database) {
-        this.database = database;
-    }
-
-    public void generateVersioningSchema()
-    {
+    public void generateVersioningSchema() {
         schema = database.getMetadata().getSchema();
 
         V            = schema.getClass("V");
@@ -51,11 +50,11 @@ public class SchemaGenerator {
         entity       = schema.createAbstractClass("Entity", V);
 
         commit.createProperty("timestamp", OType.DATETIME);
-        commit.createProperty("inserts", OType.LINKLIST, revision);
+        commit.createProperty("inserts", OType.LINKLIST, history);
         commit.createProperty("updates", OType.LINKLIST, revision);
-        commit.createProperty("deletes", OType.LINKLIST, revision);
-        commit.createProperty("insertedRelationships", OType.LINKLIST, V);
-        commit.createProperty("deletedRelationships", OType.LINKLIST, V);
+        commit.createProperty("deletes", OType.LINKLIST, history);
+        commit.createProperty("insertedRelationships", OType.LINKLIST, relationship);
+        commit.createProperty("deletedRelationships", OType.LINKLIST, relationship);
         commit.createProperty("parent", OType.LINK, commit);
         commit.createProperty("next", OType.LINK, commit);
         commit.createProperty("domainId", OType.STRING);
@@ -83,6 +82,12 @@ public class SchemaGenerator {
 
         relationship.createProperty("createdBy", OType.LINK, commit);
         relationship.createProperty("deletedBy", OType.LINK, commit);
+
+        createUIIDIndex();
+    }
+
+    private void createUIIDIndex() {
+        database.command(new OCommandScript("sql", "create index uiid unique_hash_index String")).execute();
     }
 
     public void addModel(Class<?> clazz) {

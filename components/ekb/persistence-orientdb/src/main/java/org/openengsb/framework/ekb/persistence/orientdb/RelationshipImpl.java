@@ -2,6 +2,8 @@ package org.openengsb.framework.ekb.persistence.orientdb;
 
 import org.openengsb.core.api.model.OpenEngSBModel;
 import org.openengsb.core.api.model.annotation.Model;
+import org.openengsb.core.api.model.annotation.OpenEngSBModelId;
+import java.util.UUID;
 
 /**
  * Created by Philipp Schindler on 20.09.2014.
@@ -14,15 +16,23 @@ public class RelationshipImpl implements Relationship {
     private String RID;
     private OpenEngSBModel[] relatedModels;
 
-    public RelationshipImpl(String rid) {
-        this.RID = rid;
-    }
+    @OpenEngSBModelId
+    private String uiid;
 
     public RelationshipImpl(String name, Object... relatedModels) {
         this.name = name;
+        this.uiid = UUID.randomUUID().toString();
         this.relatedModels = new OpenEngSBModel[relatedModels.length];
         for (int i = 0; i < relatedModels.length; i++)
             this.relatedModels[i] = (OpenEngSBModel)relatedModels[i];
+    }
+
+    public String getUiid() {
+        return uiid;
+    }
+
+    public void setUiid(String uiid) {
+        this.uiid = uiid;
     }
 
     @Override

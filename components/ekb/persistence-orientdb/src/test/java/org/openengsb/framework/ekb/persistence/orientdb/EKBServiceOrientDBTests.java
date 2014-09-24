@@ -1,6 +1,10 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
+import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.id.ORID;
+import com.orientechnologies.orient.core.id.ORecordId;
+import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import org.junit.After;
@@ -393,9 +397,60 @@ public class EKBServiceOrientDBTests {
     }
 
 
-    // TODO add tests for multiple relationships from one node to other nodes
-    // like a person performs multiple activities
+    @Test
+         public void testCommit_multipleRelationshipsShouldBeCreated() {
 
+        Person p0 = createTestPerson(0);
+        Activity a0 = createTestActivity(0);
+        Activity a1 = createTestActivity(1);
+
+        Relationship r0 = createRelationship("performs", p0, a0);
+        Relationship r1 = createRelationship("performs", p0, a1);
+
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        c1.addOperation(new Operation(OperationType.INSERT, a0));
+        c1.addOperation(new Operation(OperationType.INSERT, a1));
+        c1.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r0));
+        c1.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r1));
+        service.commit(c1);
+
+        // two for the revisions, and two for the current versions of the relationship
+        assertEquals(4, query("select from Relationship").size());
+
+        export("insertMultipleRelationships");
+    }
+
+    @Test
+    public void testCommit_multipleRelationshipsDelete() {
+
+        Person p0 = createTestPerson(0);
+        Activity a0 = createTestActivity(0);
+        Activity a1 = createTestActivity(1);
+
+        Relationship r0 = createRelationship("performs", p0, a0);
+        Relationship r1 = createRelationship("performs", p0, a1);
+
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        c1.addOperation(new Operation(OperationType.INSERT, a0));
+        c1.addOperation(new Operation(OperationType.INSERT, a1));
+        c1.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r0));
+        c1.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r1));
+        service.commit(c1);
+
+        EKBCommit c2 = createCommit();
+        c2.addOperation(new Operation(OperationType.DELETE_RELATIONSHIP, r1));
+        service.commit(c2);
+
+        // two for the revisions, and two for the current versions of the relationship
+        assertEquals(3, query("select from Relationship").size());
+
+        export("deleteMultipleRelationships");
+    }
+
+    // TODO negativ tests for illegal commits
+    // e.g. insert of relationship where model are not in the db or are deleted in same commit...
 
 
     @Test
@@ -475,5 +530,46 @@ public class EKBServiceOrientDBTests {
         model.setSomeEmbeddedMap(someEmbeddedMap);
 
         return model;
+    }
+
+    @Test
+    public void testIndex_shouldAddAndRetrievePersonViaIndex() {
+        Person p0 = createTestPerson(0);
+
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        service.commit(c1);
+
+        OIndex<?> uiid = service.getDatabase().getMetadata().getIndexManager().getIndex("uiid");
+        uiid.put(p0.getUiid(), new ORecordId(p0.getRID()));
+        service.getDatabase().commit();
+
+        assertEquals(1, query("select from index:uiid where key = \"" + p0.getUiid() + "\"").size());
+    }
+
+    @Test
+    public void testIndex_updateIndex() {
+        Person p0 = createTestPerson(0);
+        Person p1 = createTestPerson(1);
+
+        EKBCommit c1 = createCommit();
+        c1.addOperation(new Operation(OperationType.INSERT, p0));
+        service.commit(c1);
+
+        OIndex<?> uiid = service.getDatabase().getMetadata().getIndexManager().getIndex("uiid");
+        uiid.put(p0.getUiid(), new ORecordId(p0.getRID()));
+        service.getDatabase().commit();
+
+        EKBCommit c2 = createCommit();
+        c2.addOperation(new Operation(OperationType.INSERT, p1));
+        service.commit(c2);
+
+        uiid.remove(p0.getUiid());
+        uiid.put(p0.getUiid(), new ORecordId(p1.getRID()));
+        service.getDatabase().commit();
+
+        ODocument doc_p1 = query("select rid.fullname as 'fullname' from index:uiid where key = \""
+                + p0.getUiid() + "\"").get(0);
+        assertEquals(p1.getFullname(), doc_p1.field("fullname"));
     }
 }

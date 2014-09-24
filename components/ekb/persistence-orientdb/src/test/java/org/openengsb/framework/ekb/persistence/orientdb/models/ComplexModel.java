@@ -34,7 +34,8 @@ public class ComplexModel {
     private Date someDate;
     private byte[] someBinary;
 
-    // embedded types (Objects must be convertable to ODocument, e.g. the must be models?
+    // embedded types (Objects must be convertable to ODocument
+    // e.g. the must be simple types or List/Set/Map<String,?> or models
     // embedded objects must not have a RID or uiid, the are only accessable via the outer model
     private Object someEmbeddedObject;
     private List<Object> someEmbeddedList;
