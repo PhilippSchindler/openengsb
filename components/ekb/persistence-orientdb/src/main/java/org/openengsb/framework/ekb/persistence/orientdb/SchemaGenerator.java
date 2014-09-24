@@ -41,8 +41,8 @@ public class SchemaGenerator {
     public void generateVersioningSchema() {
         schema = database.getMetadata().getSchema();
 
-        V            = schema.getClass("V");
-        E            = schema.getClass("E");
+        V            = schema.getOrCreateClass("V");
+        E            = schema.getOrCreateClass("E");
         revision     = schema.createClass("Revision", V);
         commit       = schema.createClass("Commit", V);
         relationship = schema.createClass("Relationship", V);

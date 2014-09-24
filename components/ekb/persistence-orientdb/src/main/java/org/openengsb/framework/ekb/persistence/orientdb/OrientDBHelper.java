@@ -60,42 +60,84 @@ public class OrientDBHelper {
     private static OrientDBHelper defaultHelper;
     public static OrientDBHelper getDefault() {
         if (defaultHelper == null) {
-            OrientDBHelper helper = new OrientDBHelper();
-            helper.setDatabaseName("project-config-with-versioning");
-            helper.setUser("admin");
-            helper.setPassword("12345");
-            helper.setStorageType("plocal");
-            helper.setConnectionURL("remote:localhost");
-            defaultHelper = helper;
-            return helper;
+            defaultHelper = getInMemory();
         }
         return defaultHelper;
     }
 
+    private static OrientDBHelper embeddedHelper;
+    public static OrientDBHelper getEmbedded() {
+        if (embeddedHelper == null) {
+            OrientDBHelper helper = new OrientDBHelper();
+            helper.setDatabaseName("project-config-with-versioning");
+            helper.setUser("admin");
+            helper.setPassword("admin");
+            helper.setStorageType("plocal");
+            helper.setConnectionURL("plocal:/temp/db");
+            embeddedHelper = helper;
+            return helper;
+        }
+        return embeddedHelper;
+    }
+
+    private static OrientDBHelper remoteHelper;
+    public static OrientDBHelper getRemote() {
+        if (remoteHelper == null) {
+            OrientDBHelper helper = new OrientDBHelper();
+            helper.setDatabaseName("project-config-with-versioning");
+            helper.setUser("admin");
+            helper.setPassword("admin");
+            helper.setStorageType("plocal");
+            helper.setConnectionURL("remote:localhost");
+            remoteHelper = helper;
+            return helper;
+        }
+        return remoteHelper;
+    }
+
+    private static OrientDBHelper inMemoryHelper;
+    public static OrientDBHelper getInMemory() {
+        if (inMemoryHelper == null) {
+            OrientDBHelper helper = new OrientDBHelper();
+            helper.setDatabaseName("project-config-with-versioning");
+            helper.setUser("admin");
+            helper.setPassword("admin");
+            helper.setStorageType("memory");
+            helper.setConnectionURL("memory:/temp/db");
+            inMemoryHelper = helper;
+            return helper;
+        }
+        return inMemoryHelper;
+    }
+
     public void createOrOverwriteDatabase() throws IOException {
-        OServerAdmin admin = new OServerAdmin(connectionURL + "/" + databaseName).connect(user, password);
-
-        if (admin.existsDatabase())
-            admin.dropDatabase(storageType);
-
-        admin.createDatabase(databaseName, "graph", storageType);
-        admin.close();
-
-        ODatabaseDocumentTx database = new ODatabaseDocumentTx(connectionURL + "/" + databaseName);
-        database.open(user, password);
-        database.close();
+        if (connectionURL.startsWith("remote")) {
+            OServerAdmin admin = new OServerAdmin(connectionURL + "/" + databaseName).connect(user, password);
+            if (admin.existsDatabase())
+                admin.dropDatabase(storageType);
+            admin.createDatabase(databaseName, "document", storageType);
+            admin.close();
+            ODatabaseDocumentTx database = new ODatabaseDocumentTx(connectionURL + "/" + databaseName);
+            database.open(user, password);
+            database.close();
+        }
+        else {
+            ODatabaseDocumentTx database = new ODatabaseDocumentTx(connectionURL + "/" + databaseName);
+            if (database.exists()) {
+                database.open(user, password);
+                database.drop();
+                database = new ODatabaseDocumentTx(connectionURL + "/" + databaseName);
+            }
+            database.create();
+        }
     }
 
     public ODatabaseDocumentTx getConnection() {
-        return new ODatabaseDocumentTx(connectionURL + "/" + databaseName)
-            .open(user, password);
+         return new ODatabaseDocumentTx(connectionURL + "/" + databaseName).open(user, password);
     }
 
     public ODatabaseDocument getConnectionNoTx() {
-        return new ODatabaseDocumentTx (connectionURL + "/" + databaseName)
-                .open(user, password);
+        return getConnection();
     }
-
-
 
 }

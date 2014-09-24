@@ -1,12 +1,15 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.index.OIndex;
+import com.orientechnologies.orient.core.intent.OIntentMassiveInsert;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.storage.impl.local.paginated.base.ODurableComponent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -571,5 +574,104 @@ public class EKBServiceOrientDBTests {
         ODocument doc_p1 = query("select rid.fullname as 'fullname' from index:uiid where key = \""
                 + p0.getUiid() + "\"").get(0);
         assertEquals(p1.getFullname(), doc_p1.field("fullname"));
+    }
+
+    @Test
+    public void testCommitPerformance_add100000Persons() {
+        EKBCommit c1 = createCommit();
+        for (int i = 0; i < 100000; i++) {
+            Person p =  createTestPerson(0);
+            p.setUiid(UUID.randomUUID().toString());
+            c1.addOperation(new Operation(OperationType.INSERT, p));
+        }
+
+        long start = System.currentTimeMillis();
+        service.commit(c1);
+        long stop = System.currentTimeMillis();
+
+        long time = stop - start;
+
+        System.out.println("inserted 100000 persons in: " + time +  "ms");
+    }
+
+    @Test
+    public void testCommitPerformance_add100000Documents() {
+
+        long start = System.currentTimeMillis();
+
+        ODatabaseDocumentTx database = service.getDatabase();
+
+        ODocument current;
+        ODocument revision;
+        ODocument history;
+        ODocument commit = database.newInstance("Commit");
+
+        current = database.newInstance("Person");
+        revision = database.newInstance("Revision");
+        history = database.newInstance("PersonHistory");
+
+        List<ORID> inserts = new ArrayList<>();
+
+        for (int i = 0; i < 100000; i++) {
+            Person p =  createTestPerson(0);
+            p.setUiid(UUID.randomUUID().toString());
+
+            current.reset();
+            revision.reset();
+            history.reset();
+
+//            current = database.newInstance("Person");
+//            revision = database.newInstance("Revision");
+//            history = database.newInstance("PersonHistory");
+
+            current.field("uiid", p.getUiid());
+            current.field("fullname", p.getFullname());
+            current.field("login", p.getLogin());
+            current.field("password", p.getPassword());
+            current.field("phoneNumbers", p.getPhoneNumbers());
+            current.field("history", history);
+
+            revision.field("uiid", p.getUiid());
+            revision.field("fullname", p.getFullname());
+            revision.field("login", p.getLogin());
+            revision.field("password", p.getPassword());
+            revision.field("phoneNumbers", p.getPhoneNumbers());
+            revision.field("history", history);
+
+            history.field("createdBy", commit);
+            history.field("deleteBy", (ODocument) null);
+            history.field("archived", false);
+            history.field("current", current);
+            history.field("last",  revision);
+            history.field("first", revision);
+            List<ODocument> linkRevisions = new ArrayList<>();
+            linkRevisions.add(revision);
+            history.field("revisions", linkRevisions);
+
+            current.save(); // saves history and revision as well
+            inserts.add(history.getIdentity().copy());
+        }
+
+        commit.field("inserts", inserts);
+        commit.save();
+
+        database.commit();
+
+
+        long stop = System.currentTimeMillis();
+        long time = stop - start;
+
+        System.out.println("without overhead inserted 300000 vertices in: " + time +  "ms");
+
+        // approx 4x speedup, and huge memory saving when using
+        //  - getIdentity().copy() instead of keeping the ODocument instance
+        //  - .reset() instead of recreating a ODocument
+
+        // about 17260 vertices per second in vm in embedded mode (@25MB/s i/o rate and about 400MB ram usage)
+        // about 61112 vertices per second in vm in in-memory mode
+
+        // current implementation
+        // about  7748 vertices per second in embedded mode (@15MB/s i/o rate and about 1,3GB ram usage)
+        // about 17421 vertices per second in in-memory mode
     }
 }
