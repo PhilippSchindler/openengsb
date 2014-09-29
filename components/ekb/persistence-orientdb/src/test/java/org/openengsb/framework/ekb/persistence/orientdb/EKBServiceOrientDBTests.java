@@ -573,6 +573,30 @@ public class EKBServiceOrientDBTests {
         System.out.println("deleted  " + ENTITIES + " objects using " + THREADS + " threads in " + deleteTime + " ms");
     }
 
+    @Test
+    public void testCommitPerformance_plcSplitToSmallerCommits() {
+        final int COMMITS = 10;
+        final int ENTITIES = 10000;
+        Plc[] plcs = generateRandomPlcs(ENTITIES);
+
+        EKBCommit[] commitsInsert = createParallelCommits(COMMITS, ENTITIES, plcs, OperationType.INSERT);
+        EKBCommit[] commitsUpdate = createParallelCommits(COMMITS, ENTITIES, plcs, OperationType.UPDATE);
+        EKBCommit[] commitsDelete = createParallelCommits(COMMITS, ENTITIES, plcs, OperationType.DELETE);
+
+        long insertTime = runSequentialCommits(commitsInsert);
+        System.out.println("inserted " + ENTITIES + " objects splitted into " + COMMITS + " commits in " +
+            insertTime + " ms");
+
+        long updateTime = runSequentialCommits(commitsUpdate);
+        System.out.println("updated  " + ENTITIES + " objects splitted into " + COMMITS + " commits in " +
+            updateTime + " ms");
+
+        long deleteTime = runSequentialCommits(commitsDelete);
+        System.out.println("deleted  " + ENTITIES + " objects splitted into " + COMMITS + " commits in " +
+            deleteTime + " ms");
+    }
+
+
     public EKBCommit[] createParallelCommits(final int THREADS, final int ENTITIES, Plc[] plcs, OperationType type) {
         EKBCommit[] commits = new EKBCommit[THREADS];
         for (int i = 0; i < THREADS; i++) {
@@ -612,6 +636,17 @@ public class EKBServiceOrientDBTests {
         long stop = System.currentTimeMillis();
         return stop - start;
     }
+    public long runSequentialCommits(EKBCommit[] commits) {
+        long start = System.currentTimeMillis();
+
+        for (int i = 0; i < commits.length; i++) {
+            service.commit(commits[i]);
+        }
+
+        long stop = System.currentTimeMillis();
+        return stop - start;
+    }
+
 
     private static Plc generateRandomPlc() {
         Plc plc = new Plc();
