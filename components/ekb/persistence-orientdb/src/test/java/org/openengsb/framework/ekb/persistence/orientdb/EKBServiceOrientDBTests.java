@@ -51,6 +51,7 @@ public class EKBServiceOrientDBTests {
         createDatabaseAndSchema();
         service = new EKBServiceOrientDB();
         service.setDatabase(OrientDBHelper.getDefault().getConnection());
+        service.setUIIDIndexSupportEnabled(false);
         random = new Random(4711);
     }
 
@@ -575,7 +576,7 @@ public class EKBServiceOrientDBTests {
 
     @Test
     public void testCommitPerformance_plcSplitToSmallerCommits() {
-        final int COMMITS = 10;
+        final int COMMITS = 1;
         final int ENTITIES = 10000;
         Plc[] plcs = generateRandomPlcs(ENTITIES);
 
@@ -594,6 +595,23 @@ public class EKBServiceOrientDBTests {
         long deleteTime = runSequentialCommits(commitsDelete);
         System.out.println("deleted  " + ENTITIES + " objects splitted into " + COMMITS + " commits in " +
             deleteTime + " ms");
+
+        /*
+            with massiveInsertIntent
+            inserted 10000 objects splitted into 1 commits in 7154 ms
+            updated  10000 objects splitted into 1 commits in 10363 ms
+            deleted  10000 objects splitted into 1 commits in 3896 ms
+
+            without massiveInsertIntent
+            inserted 10000 objects splitted into 1 commits in 7826 ms
+            updated  10000 objects splitted into 1 commits in 6056 ms
+            deleted  10000 objects splitted into 1 commits in 2056 ms
+
+            without index
+            inserted 10000 objects splitted into 1 commits in 7514 ms
+            updated  10000 objects splitted into 1 commits in 6094 ms
+            deleted  10000 objects splitted into 1 commits in 1855 ms
+         */
     }
 
 

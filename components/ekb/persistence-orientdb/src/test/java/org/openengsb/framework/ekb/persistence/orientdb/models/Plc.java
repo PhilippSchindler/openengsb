@@ -26,10 +26,9 @@ import org.openengsb.core.api.model.annotation.OpenEngSBModelId;
 @Model
 public class Plc {
 
-    private String rid;
-
     @OpenEngSBModelId
     private String uuid;
+    private String rid;
     private String project;
     private String region;
     private String componentNumber;

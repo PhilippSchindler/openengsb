@@ -21,10 +21,13 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.index.OIndex;
+import com.orientechnologies.orient.core.intent.OIntent;
+import com.orientechnologies.orient.core.intent.OIntentMassiveInsert;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.query.OQuery;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
+import com.orientechnologies.orient.core.tx.OTransaction;
 import org.openengsb.core.api.model.OpenEngSBModel;
 import org.openengsb.core.api.model.OpenEngSBModelEntry;
 import org.openengsb.core.ekb.api.Query;
@@ -552,8 +555,9 @@ public class EKBServiceOrientDB {
                     links.add(new Link(fieldName, (ODocument) doc.field(fieldName)));
                 } else if (field instanceof List<?>) {
                     for (Object target : (List<?>) field) {
-                        if (!(target instanceof ODocument))
+                        if (!(target instanceof ODocument)) {
                             break;
+                        }
                         links.add(new Link(fieldName, (ODocument) target));
                     }
                 }
@@ -563,14 +567,14 @@ public class EKBServiceOrientDB {
     }
 
     private ORID getRID(OpenEngSBModel model) {
-        List<OpenEngSBModelEntry> entries = model.toOpenEngSBModelValues();
-        for (OpenEngSBModelEntry entry : entries) {
-            if (entry.getKey().equals("rid")) {
-                if (entry.getValue() == null) {
-                    return null;
-                }
-                return new ORecordId((String) entry.getValue());
-            }
+        try {
+            return new ORecordId((String) model.getClass().getMethod("getRID").invoke(model));
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
         }
         return null;
     }
@@ -610,7 +614,6 @@ public class EKBServiceOrientDB {
 
     //@Override
     public void commit(EKBCommit ekbCommit) {
-
         Date timestamp = new Date();
         ODocument v_commit = createCommitVertex(ekbCommit, timestamp, null);
 

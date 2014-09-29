@@ -20,6 +20,7 @@ package org.openengsb.framework.ekb.persistence.orientdb;
 import com.orientechnologies.orient.client.remote.OServerAdmin;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.tinkerpop.blueprints.impls.orient.OrientBatchGraph;
 
 import java.io.IOException;
 
@@ -75,7 +76,7 @@ public class OrientDBHelper {
 
     public static OrientDBHelper getDefault() {
         if (defaultHelper == null) {
-            defaultHelper = getInMemory();
+            defaultHelper = getEmbedded();
         }
         return defaultHelper;
     }
