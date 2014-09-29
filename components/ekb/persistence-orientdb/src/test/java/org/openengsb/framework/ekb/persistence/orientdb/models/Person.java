@@ -28,7 +28,7 @@ public class Person {
     @OpenEngSBModelId
     private String uiid;
 
-    private String RID;
+    private String rid;
     private String fullname;
     private String login;
     private String password;
@@ -43,11 +43,11 @@ public class Person {
     }
 
     public String getRID() {
-        return RID;
+        return rid;
     }
 
     public void setRID(String RID) {
-        this.RID = RID;
+        this.rid = RID;
     }
 
     public String getFullname() {

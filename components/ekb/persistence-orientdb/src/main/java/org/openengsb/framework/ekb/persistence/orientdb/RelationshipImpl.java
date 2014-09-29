@@ -20,13 +20,14 @@ package org.openengsb.framework.ekb.persistence.orientdb;
 import org.openengsb.core.api.model.OpenEngSBModel;
 import org.openengsb.core.api.model.annotation.Model;
 import org.openengsb.core.api.model.annotation.OpenEngSBModelId;
+
 import java.util.UUID;
 
 @Model
 public class RelationshipImpl implements Relationship {
 
     private String name;
-    private String RID;
+    private String rid;
     private OpenEngSBModel[] relatedModels;
 
     @OpenEngSBModelId
@@ -36,8 +37,9 @@ public class RelationshipImpl implements Relationship {
         this.name = name;
         this.uiid = UUID.randomUUID().toString();
         this.relatedModels = new OpenEngSBModel[relatedModels.length];
-        for (int i = 0; i < relatedModels.length; i++)
-            this.relatedModels[i] = (OpenEngSBModel)relatedModels[i];
+        for (int i = 0; i < relatedModels.length; i++) {
+            this.relatedModels[i] = (OpenEngSBModel) relatedModels[i];
+        }
     }
 
     public String getUiid() {
@@ -50,12 +52,12 @@ public class RelationshipImpl implements Relationship {
 
     @Override
     public String getRID() {
-        return RID;
+        return rid;
     }
 
     @Override
     public void setRID(String rid) {
-        this.RID = rid;
+        this.rid = rid;
     }
 
     @Override

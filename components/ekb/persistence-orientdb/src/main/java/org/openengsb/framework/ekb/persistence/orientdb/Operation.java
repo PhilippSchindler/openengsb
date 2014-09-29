@@ -27,6 +27,7 @@ public class Operation {
     public OperationType getType() {
         return type;
     }
+
     public OpenEngSBModel getModel() {
         return model;
     }
@@ -34,13 +35,14 @@ public class Operation {
     /**
      * Create a new operation for use in an EKBCommit.
      * Check's if model is a OpenEngSBModel and throws an IllegalArgumentException otherwise
+     *
      * @param type
      * @param model
      */
     public Operation(OperationType type, Object model) {
         this.type = type;
         checkIfModel(model);
-        this.model = (OpenEngSBModel)model;
+        this.model = (OpenEngSBModel) model;
     }
 
     /**

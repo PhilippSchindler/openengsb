@@ -34,8 +34,9 @@ public class EKBCommitImpl implements EKBCommit {
 
     public EKBCommitImpl() {
         this.operations = new HashMap<>();
-        for (OperationType type : OperationType.values())
+        for (OperationType type : OperationType.values()) {
             operations.put(type, new ArrayList<Operation>());
+        }
     }
 
     @Override
@@ -46,8 +47,9 @@ public class EKBCommitImpl implements EKBCommit {
 
     @Override
     public EKBCommit addOperations(List<Operation> operations) {
-        for (Operation operation : operations)
+        for (Operation operation : operations) {
             this.operations.get(operation.getType()).add(operation);
+        }
         return this;
     }
 
@@ -55,8 +57,6 @@ public class EKBCommitImpl implements EKBCommit {
     public List<Operation> getOperations(OperationType type) {
         return operations.get(type);
     }
-
-
 
     @Override
     public EKBCommit setDomainId(String domainId) {
@@ -125,9 +125,5 @@ public class EKBCommitImpl implements EKBCommit {
     public void setComment(String comment) {
         this.comment = comment;
     }
-
-
-
-
 
 }

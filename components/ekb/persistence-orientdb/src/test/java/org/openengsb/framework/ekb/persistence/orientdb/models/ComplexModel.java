@@ -32,7 +32,7 @@ public class ComplexModel {
     @OpenEngSBModelId
     private String uiid;
 
-    private String RID;
+    private String rid;
 
     // native types
     private String someString;
@@ -60,7 +60,6 @@ public class ComplexModel {
 
     // link types are handled via relationships
 
-
     public String getUiid() {
         return uiid;
     }
@@ -70,11 +69,11 @@ public class ComplexModel {
     }
 
     public String getRID() {
-        return RID;
+        return rid;
     }
 
-    public void setRID(String RID) {
-        this.RID = RID;
+    public void setRID(String rid) {
+        this.rid = rid;
     }
 
     public String getSomeString() {

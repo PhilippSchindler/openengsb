@@ -55,13 +55,13 @@ public class SchemaGenerator {
     public void generateVersioningSchema() {
         schema = database.getMetadata().getSchema();
 
-        V            = schema.getOrCreateClass("V");
-        E            = schema.getOrCreateClass("E");
-        revision     = schema.createClass("Revision", V);
-        commit       = schema.createClass("Commit", V);
+        V = schema.getOrCreateClass("V");
+        E = schema.getOrCreateClass("E");
+        revision = schema.createClass("Revision", V);
+        commit = schema.createClass("Commit", V);
         relationship = schema.createClass("Relationship", V);
-        history      = schema.createAbstractClass("History", V);
-        entity       = schema.createAbstractClass("Entity", V);
+        history = schema.createAbstractClass("History", V);
+        entity = schema.createAbstractClass("Entity", V);
 
         commit.createProperty("timestamp", OType.DATETIME);
         commit.createProperty("inserts", OType.LINKLIST, history);
@@ -111,8 +111,7 @@ public class SchemaGenerator {
         if (superclass == Object.class) {
             schema.createClass(modelName, entity);
             schema.createClass(modelName + "History", history);
-        }
-        else {
+        } else {
             schema.createClass(modelName, schema.getClass(superclass.getSimpleName()));
             schema.createClass(modelName + "History", schema.getClass(superclass.getSimpleName() + "History"));
         }

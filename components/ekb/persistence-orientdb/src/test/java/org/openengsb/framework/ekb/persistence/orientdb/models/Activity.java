@@ -26,7 +26,7 @@ public class Activity {
     @OpenEngSBModelId
     private String uiid;
 
-    private String RID;
+    private String rid;
     private String desciption;
     private boolean finished;
     private int duration;
@@ -41,11 +41,11 @@ public class Activity {
     }
 
     public String getRID() {
-        return RID;
+        return rid;
     }
 
     public void setRID(String RID) {
-        this.RID = RID;
+        this.rid = RID;
     }
 
     public String getDesciption() {

@@ -72,6 +72,7 @@ public class OrientDBHelper {
     }
 
     private static OrientDBHelper defaultHelper;
+
     public static OrientDBHelper getDefault() {
         if (defaultHelper == null) {
             defaultHelper = getInMemory();
@@ -80,6 +81,7 @@ public class OrientDBHelper {
     }
 
     private static OrientDBHelper embeddedHelper;
+
     public static OrientDBHelper getEmbedded() {
         if (embeddedHelper == null) {
             OrientDBHelper helper = new OrientDBHelper();
@@ -95,6 +97,7 @@ public class OrientDBHelper {
     }
 
     private static OrientDBHelper remoteHelper;
+
     public static OrientDBHelper getRemote() {
         if (remoteHelper == null) {
             OrientDBHelper helper = new OrientDBHelper();
@@ -110,6 +113,7 @@ public class OrientDBHelper {
     }
 
     private static OrientDBHelper inMemoryHelper;
+
     public static OrientDBHelper getInMemory() {
         if (inMemoryHelper == null) {
             OrientDBHelper helper = new OrientDBHelper();
@@ -127,15 +131,15 @@ public class OrientDBHelper {
     public void createOrOverwriteDatabase() throws IOException {
         if (connectionURL.startsWith("remote")) {
             OServerAdmin admin = new OServerAdmin(connectionURL + "/" + databaseName).connect(user, password);
-            if (admin.existsDatabase())
+            if (admin.existsDatabase()) {
                 admin.dropDatabase(storageType);
+            }
             admin.createDatabase(databaseName, "document", storageType);
             admin.close();
             ODatabaseDocumentTx database = new ODatabaseDocumentTx(connectionURL + "/" + databaseName);
             database.open(user, password);
             database.close();
-        }
-        else {
+        } else {
             ODatabaseDocumentTx database = new ODatabaseDocumentTx(connectionURL + "/" + databaseName);
             if (database.exists()) {
                 database.open(user, password);
@@ -147,7 +151,7 @@ public class OrientDBHelper {
     }
 
     public ODatabaseDocumentTx getConnection() {
-         return new ODatabaseDocumentTx(connectionURL + "/" + databaseName).open(user, password);
+        return new ODatabaseDocumentTx(connectionURL + "/" + databaseName).open(user, password);
     }
 
     public ODatabaseDocument getConnectionNoTx() {

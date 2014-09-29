@@ -28,7 +28,7 @@ public class Project {
     @OpenEngSBModelId
     private String uiid;
 
-    private String RID;
+    private String rid;
     private String name;
     private Date startDate;
     private Date endDate;
@@ -44,11 +44,11 @@ public class Project {
     }
 
     public String getRID() {
-        return RID;
+        return rid;
     }
 
     public void setRID(String RID) {
-        this.RID = RID;
+        this.rid = RID;
     }
 
     public String getName() {

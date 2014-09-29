@@ -21,12 +21,15 @@ import org.openengsb.core.api.model.OpenEngSBModel;
 
 public interface Relationship {
 
-    public String getRID();
-    public void setRID(String rid);
+    String getRID();
 
-    public String getName();
-    public OpenEngSBModel[] getRelatedModels();
+    void setRID(String rid);
 
-    public String getLinkNameForRecentRevision(OpenEngSBModel model);
-    public String getLinkNameForAllRevisions(OpenEngSBModel model);
+    String getName();
+
+    OpenEngSBModel[] getRelatedModels();
+
+    String getLinkNameForRecentRevision(OpenEngSBModel model);
+
+    String getLinkNameForAllRevisions(OpenEngSBModel model);
 }

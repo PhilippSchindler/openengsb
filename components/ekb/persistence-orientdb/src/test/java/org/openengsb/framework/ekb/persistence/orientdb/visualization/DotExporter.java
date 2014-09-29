@@ -27,7 +27,7 @@ import java.util.List;
 
 public class DotExporter {
 
-    public static void export(ODatabaseDocumentTx database, String filepath, String ...classes) {
+    public static void export(ODatabaseDocumentTx database, String filepath, String... classes) {
 
         StringBuilder sb = new StringBuilder();
         String svgpath = filepath.split("\\.")[0] + ".svg";
@@ -38,7 +38,8 @@ public class DotExporter {
         sb.append("splines=true;\n");
         sb.append("epsilon=0.000001;\n");
 
-        if (classes.length == 0) classes = new String[] { "V" };
+        if (classes.length == 0)
+            classes = new String[]{ "V" };
 
         for (String clazz : classes) {
             for (ODocument doc : database.browseClass(clazz)) {
@@ -55,7 +56,7 @@ public class DotExporter {
                     Object field = doc.field(fieldName);
                     if (field instanceof ODocument) {
                         sb.append(getDotNode(doc) + " -> " + getDotNode((ODocument) field) +
-                               " [ label=" + fieldName + " ];\n");
+                                " [ label=" + fieldName + " ];\n");
                     } else if (field instanceof List<?>) {
                         for (Object o : (List<?>) field) {
                             if (o instanceof ODocument) {
@@ -77,8 +78,7 @@ public class DotExporter {
             Runtime.getRuntime().exec("neato -Tsvg \"" + filepath + "\" -o \"" + svgpath + "\"");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

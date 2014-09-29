@@ -18,27 +18,24 @@
 package org.openengsb.framework.ekb.persistence.orientdb;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.index.OIndex;
-import com.orientechnologies.orient.core.intent.OIntentMassiveInsert;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.storage.impl.local.paginated.base.ODurableComponent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openengsb.core.api.model.OpenEngSBModel;
-import org.openengsb.core.api.model.OpenEngSBModelEntry;
 import org.openengsb.framework.ekb.persistence.orientdb.models.*;
 import org.openengsb.framework.ekb.persistence.orientdb.visualization.DotExporter;
+
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.*;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -47,75 +44,21 @@ public class EKBServiceOrientDBTests {
 
     private static EKBServiceOrientDB service;
     public static final boolean DO_GRAPHICAL_EXPORT = true;
-
-    static Person[] persons;
-    static Activity[] activities;
+    private static Random random;
 
     @Before
     public void setUp() throws IOException {
         createDatabaseAndSchema();
         service = new EKBServiceOrientDB();
         service.setDatabase(OrientDBHelper.getDefault().getConnection());
+        random = new Random(4711);
     }
 
     @After
     public void cleanUp() {
-        // maybe drop database here (not doing because it's automatically recreated in setUp
+        // maybe drop database here (not doing this now because it's automatically recreated in setUp
+        // and it's useful to test queries on resulting database
         service.getDatabase().close();
-    }
-
-    // old test
-    public void testCommit_shouldCreateDataAndVersioningInfos() {
-
-        EKBServiceOrientDB service = new EKBServiceOrientDB();
-        service.setDatabase(OrientDBHelper.getDefault().getConnection());
-
-        EKBCommit c1 = new EKBCommitImpl();
-        c1.addOperation(new Operation(OperationType.INSERT, persons[0]));
-        c1.addOperation(new Operation(OperationType.INSERT, persons[1]));
-        c1.addOperation(new Operation(OperationType.INSERT, persons[2]));
-        c1.addOperation(new Operation(OperationType.INSERT, persons[3]));
-        service.commit(c1);
-
-        EKBCommit c2 = new EKBCommitImpl();
-        c2.addOperation(new Operation(OperationType.INSERT, persons[4]));
-        c2.addOperation(new Operation(OperationType.INSERT, persons[5]));
-        service.commit(c2);
-
-        EKBCommit c3 = new EKBCommitImpl();
-        c3.addOperation(new Operation(OperationType.DELETE, persons[4]));
-        service.commit(c3);
-
-        EKBCommit c4 = new EKBCommitImpl();
-        persons[0].setPassword("update01");
-        c4.addOperation(new Operation(OperationType.UPDATE, persons[0]));
-        service.commit(c4);
-
-        EKBCommit c5 = new EKBCommitImpl();
-        persons[0].setPassword("update02");
-        c5.addOperation(new Operation(OperationType.UPDATE, persons[0]));
-        c5.addOperation(new Operation(OperationType.INSERT, activities[0]));
-        c5.addOperation(new Operation(OperationType.INSERT, activities[1]));
-        c5.addOperation(new Operation(OperationType.INSERT, activities[2]));
-        service.commit(c5);
-
-        EKBCommit c6 = new EKBCommitImpl();
-        Relationship r0 = new RelationshipImpl("performs", persons[0], activities[1]);
-        c6.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, new RelationshipImpl("performs", persons[0], activities[0])));
-        c6.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, r0));
-        c6.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, new RelationshipImpl("performs", persons[0], activities[2])));
-        service.commit(c6);
-
-        EKBCommit c7 = new EKBCommitImpl();
-        c7.addOperation(new Operation(OperationType.DELETE_RELATIONSHIP, r0));
-        c7.addOperation(new Operation(OperationType.INSERT_RELATIONSHIP, new RelationshipImpl("performs", persons[1], activities[2])));
-        service.commit(c7);
-
-        EKBCommit c8 = new EKBCommitImpl();
-        c8.addOperation(new Operation(OperationType.DELETE, persons[1]));
-        service.commit(c8);
-
-        DotExporter.export(service.getDatabase(), "C:\\Users\\sp\\db.dot", "PersonHistory", "ActivityHistory");
     }
 
     private static void createDatabaseAndSchema() throws IOException {
@@ -131,30 +74,33 @@ public class EKBServiceOrientDBTests {
         generator.addModel(Person.class);
         generator.addModel(Manager.class);  // manager must be added after person due to inheritance
 
+        generator.addModel(ComplexModel.class);
+        generator.addModel(Plc.class);
+
         database.close();
     }
 
     private void export(String name, String... classes) {
-        if (DO_GRAPHICAL_EXPORT)
-            DotExporter.export(service.getDatabase(),
-                    "C:\\Users\\sp\\Desktop\\dotexport\\" + name + ".dot", classes );
+        if (DO_GRAPHICAL_EXPORT) {
+            DotExporter.export(service.getDatabase(), "C:\\Users\\sp\\Desktop\\dotexport\\" + name + ".dot", classes);
+        }
     }
 
     private List<ODocument> query(String orientSql) {
-        return (List<ODocument>)service.nativeQuery(orientSql);
+        return (List<ODocument>) service.nativeQuery(orientSql);
     }
 
     private Person createTestPerson(int i) {
-        String[] names = new String[] { "Anna", "Bernd", "Claus", "Hans", "Tina" };
-        String[] passwords = new String[] { "12345", "qwerty", "qwertz", "abc123", "password" };
-        String[] uiids = new String[] { "akjha-askac", "1uiya-hask1", "1212a-45acw", "121ax-12789", "12nk1-mkdhn" };
+        String[] names = new String[]{ "Anna", "Bernd", "Claus", "Hans", "Tina" };
+        String[] passwords = new String[]{ "12345", "qwerty", "qwertz", "abc123", "password" };
+        String[] uiids = new String[]{ "akjha-askac", "1uiya-hask1", "1212a-45acw", "121ax-12789", "12nk1-mkdhn" };
 
         List<List<?>> phones = Arrays.asList(
-            null,
-            Arrays.asList(),
-            Arrays.asList("01/23456789"),
-            Arrays.asList("09/87654321", "+43/6641111111"),
-            Arrays.asList("02/200000000", "080000011100", "7788112112")
+                null,
+                Arrays.asList(),
+                Arrays.asList("01/23456789"),
+                Arrays.asList("09/87654321", "+43/6641111111"),
+                Arrays.asList("02/200000000", "080000011100", "7788112112")
         );
 
         Person person = new Person();
@@ -166,6 +112,7 @@ public class EKBServiceOrientDBTests {
 
         return person;
     }
+
     private Manager createTestManager() {
         Manager manager = new Manager();
         manager.setFullname("Gerold Wichtig");
@@ -176,12 +123,13 @@ public class EKBServiceOrientDBTests {
         manager.setSeniorManager(true);
         return manager;
     }
+
     private Activity createTestActivity(int i) {
-        String[] desciptions = new String[] { "design engine part 16.1", "evualuate max trust", "contact supplier" };
-        String[] uiids = new String[] { "mncn1-0askl", "hnnkm-1789a", "11212-00144" };
-        int[] durations = new int[] { 45, 0, 2 };
-        int[] expDurations = new int[] { 80, 40, 1 };
-        boolean[] finished = new boolean[] { false, false, true };
+        String[] desciptions = new String[]{ "design engine part 16.1", "evualuate max trust", "contact supplier" };
+        String[] uiids = new String[]{ "mncn1-0askl", "hnnkm-1789a", "11212-00144" };
+        int[] durations = new int[]{ 45, 0, 2 };
+        int[] expDurations = new int[]{ 80, 40, 1 };
+        boolean[] finished = new boolean[]{ false, false, true };
 
         Activity activity = new Activity();
         activity.setDesciption(desciptions[i]);
@@ -192,13 +140,14 @@ public class EKBServiceOrientDBTests {
 
         return activity;
     }
+
     private EKBCommit createCommit() {
         return new EKBCommitImpl();
     }
+
     private Relationship createRelationship(String name, Object... relatedModels) {
         return new RelationshipImpl(name, relatedModels);
     }
-
 
     @Test
     public void testCommit_shouldInsert5PersonsAndAManager() {
@@ -412,9 +361,8 @@ public class EKBServiceOrientDBTests {
         export("relationshipBehavourOnDeleleOfRelatedModel");
     }
 
-
     @Test
-         public void testCommit_multipleRelationshipsShouldBeCreated() {
+    public void testCommit_multipleRelationshipsShouldBeCreated() {
 
         Person p0 = createTestPerson(0);
         Activity a0 = createTestActivity(0);
@@ -468,33 +416,31 @@ public class EKBServiceOrientDBTests {
     // TODO negativ tests for illegal commits
     // e.g. insert of relationship where model are not in the db or are deleted in same commit...
 
-
     @Test
     public void testComplexModel() {
 
         ComplexModel model = prepareComplexModel();
 
-//        EKBCommit commit = new EKBCommitImpl();
-//        commit.addOperation(new Operation(OperationType.INSERT, model));
+        //        EKBCommit commit = new EKBCommitImpl();
+        //        commit.addOperation(new Operation(OperationType.INSERT, model));
 
-        assert(OType.isSimpleType(model.getSomeString()));
-        assert(OType.isSimpleType(model.getSomeByte()));
-        assert(OType.isSimpleType(model.getSomeShort()));
-        assert(OType.isSimpleType(model.getSomeInteger()));
-        assert(OType.isSimpleType(model.getSomeLong()));
-        assert(OType.isSimpleType(model.getSomeFloat()));
-        assert(OType.isSimpleType(model.getSomeDouble()));
-        assert(OType.isSimpleType(model.getSomeDecimal()));
-        assert(OType.isSimpleType(model.getSomeBoolean()));
+        assert (OType.isSimpleType(model.getSomeString()));
+        assert (OType.isSimpleType(model.getSomeByte()));
+        assert (OType.isSimpleType(model.getSomeShort()));
+        assert (OType.isSimpleType(model.getSomeInteger()));
+        assert (OType.isSimpleType(model.getSomeLong()));
+        assert (OType.isSimpleType(model.getSomeFloat()));
+        assert (OType.isSimpleType(model.getSomeDouble()));
+        assert (OType.isSimpleType(model.getSomeDecimal()));
+        assert (OType.isSimpleType(model.getSomeBoolean()));
 
         assertFalse(OType.isSimpleType(model.getSomeEmbeddedObject()));
         assertFalse(OType.isSimpleType(model.getSomeEmbeddedList()));
         assertFalse(OType.isSimpleType(model.getSomeEmbeddedSet()));
         assertFalse(OType.isSimpleType(model.getSomeEmbeddedMap()));
 
-
         ODocument document = service.getDatabase().newInstance("V");
-        service.convertModel((OpenEngSBModel)model, document);
+        service.convertModel((OpenEngSBModel) model, document);
 
         document.save();
         service.getDatabase().commit();
@@ -517,7 +463,7 @@ public class EKBServiceOrientDBTests {
         model.setSomeDouble(47.12);
         model.setSomeDecimal(new BigDecimal("123456789123456789123456789123456789123456789123456789123456789"));
         model.setSomeBoolean(true);
-        model.setSomeBinary(new byte[]{1, 2, 4, 8, 16, 32, 64});
+        model.setSomeBinary(new byte[]{ 1, 2, 4, 8, 16, 32, 64 });
 
         Calendar c = Calendar.getInstance();
         c.set(2006, 05, 04, 03, 02, 01);
@@ -590,10 +536,10 @@ public class EKBServiceOrientDBTests {
     }
 
     @Test
-    public void testCommitPerformance_add100000Persons() {
+    public void testCommitPerformance_add10000Persons() {
         EKBCommit c1 = createCommit();
-        for (int i = 0; i < 100000; i++) {
-            Person p =  createTestPerson(0);
+        for (int i = 0; i < 10000; i++) {
+            Person p = createTestPerson(0);
             p.setUiid(UUID.randomUUID().toString());
             c1.addOperation(new Operation(OperationType.INSERT, p));
         }
@@ -604,87 +550,173 @@ public class EKBServiceOrientDBTests {
 
         long time = stop - start;
 
-        System.out.println("inserted 100000 persons in: " + time +  "ms");
+        System.out.println("inserted 10000 persons in: " + time + "ms");
     }
 
     @Test
-    public void testCommitPerformance_add100000Documents() {
+    public void testCommitPerformance_plcInParallel() {
+        final int THREADS = 1;
+        final int ENTITIES = 10000;
+        Plc[] plcs = generateRandomPlcs(ENTITIES);
 
+        EKBCommit[] commitsInsert = createParallelCommits(THREADS, ENTITIES, plcs, OperationType.INSERT);
+        EKBCommit[] commitsUpdate = createParallelCommits(THREADS, ENTITIES, plcs, OperationType.UPDATE);
+        EKBCommit[] commitsDelete = createParallelCommits(THREADS, ENTITIES, plcs, OperationType.DELETE);
+
+        long insertTime = runParallelCommits(commitsInsert);
+        System.out.println("inserted " + ENTITIES + " objects using " + THREADS + " threads in " + insertTime + " ms");
+
+        long updateTime = runParallelCommits(commitsUpdate);
+        System.out.println("updated  " + ENTITIES + " objects using " + THREADS + " threads in " + updateTime + " ms");
+
+        long deleteTime = runParallelCommits(commitsDelete);
+        System.out.println("deleted  " + ENTITIES + " objects using " + THREADS + " threads in " + deleteTime + " ms");
+    }
+
+    public EKBCommit[] createParallelCommits(final int THREADS, final int ENTITIES, Plc[] plcs, OperationType type) {
+        EKBCommit[] commits = new EKBCommit[THREADS];
+        for (int i = 0; i < THREADS; i++) {
+            commits[i] = new EKBCommitImpl();
+            for (int j = ENTITIES/THREADS * i; j < ENTITIES/THREADS * (i + 1); j++) {
+                commits[i].addOperation(new Operation(type, plcs[j]));
+            }
+        }
+        return commits;
+    }
+
+    public long runParallelCommits(EKBCommit[] commits) {
         long start = System.currentTimeMillis();
 
-        ODatabaseDocumentTx database = service.getDatabase();
-
-        ODocument current;
-        ODocument revision;
-        ODocument history;
-        ODocument commit = database.newInstance("Commit");
-
-        current = database.newInstance("Person");
-        revision = database.newInstance("Revision");
-        history = database.newInstance("PersonHistory");
-
-        List<ORID> inserts = new ArrayList<>();
-
-        for (int i = 0; i < 100000; i++) {
-            Person p =  createTestPerson(0);
-            p.setUiid(UUID.randomUUID().toString());
-
-            current.reset();
-            revision.reset();
-            history.reset();
-
-//            current = database.newInstance("Person");
-//            revision = database.newInstance("Revision");
-//            history = database.newInstance("PersonHistory");
-
-            current.field("uiid", p.getUiid());
-            current.field("fullname", p.getFullname());
-            current.field("login", p.getLogin());
-            current.field("password", p.getPassword());
-            current.field("phoneNumbers", p.getPhoneNumbers());
-            current.field("history", history);
-
-            revision.field("uiid", p.getUiid());
-            revision.field("fullname", p.getFullname());
-            revision.field("login", p.getLogin());
-            revision.field("password", p.getPassword());
-            revision.field("phoneNumbers", p.getPhoneNumbers());
-            revision.field("history", history);
-
-            history.field("createdBy", commit);
-            history.field("deleteBy", (ODocument) null);
-            history.field("archived", false);
-            history.field("current", current);
-            history.field("last",  revision);
-            history.field("first", revision);
-            List<ODocument> linkRevisions = new ArrayList<>();
-            linkRevisions.add(revision);
-            history.field("revisions", linkRevisions);
-
-            current.save(); // saves history and revision as well
-            inserts.add(history.getIdentity().copy());
+        Thread[] threads = new Thread[commits.length];
+        for (int i = 0; i < commits.length; i++) {
+            final EKBCommit c = commits[i];
+            threads[i] = new Thread(new Runnable() {
+                @Override public void run() {
+                    EKBServiceOrientDB s = new EKBServiceOrientDB();
+                    s.setDatabase(OrientDBHelper.getDefault().getConnection());
+                    s.commit(c);
+                }
+            });
+        }
+        for (int i = 0; i < commits.length; i++) {
+            threads[i].start();
+        }
+        for (int i = 0; i < commits.length; i++) {
+            try {
+                threads[i].join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
-        commit.field("inserts", inserts);
-        commit.save();
-
-        database.commit();
-
-
         long stop = System.currentTimeMillis();
-        long time = stop - start;
-
-        System.out.println("without overhead inserted 300000 vertices in: " + time +  "ms");
-
-        // approx 4x speedup, and huge memory saving when using
-        //  - getIdentity().copy() instead of keeping the ODocument instance
-        //  - .reset() instead of recreating a ODocument
-
-        // about 17260 vertices per second in vm in embedded mode (@25MB/s i/o rate and about 400MB ram usage)
-        // about 61112 vertices per second in vm in in-memory mode
-
-        // current implementation
-        // about  7748 vertices per second in embedded mode (@15MB/s i/o rate and about 1,3GB ram usage)
-        // about 17421 vertices per second in in-memory mode
+        return stop - start;
     }
+
+    private static Plc generateRandomPlc() {
+        Plc plc = new Plc();
+        final int FIRST_BITS = 50;
+        final int SECOND_BITS = 50;
+        final int CUSTOM_BITS = 50;
+        final int BASE = 32;
+
+        plc.setUuid(UUID.randomUUID().toString());
+        plc.setProject(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setRegion(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setComponentNumber(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setCpuNumber(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setChannelName(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setRackId(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setPosition(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setKks0(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setKks1(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setKks2(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setKks3(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setLongText(new BigInteger(500, random).toString(BASE));
+        plc.setStatus(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setDp(new BigInteger(FIRST_BITS, random).toString(BASE));
+        plc.setCat(new BigInteger(FIRST_BITS, random).toString(BASE));
+
+        plc.setPlt(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setMeasureRangeStart(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setMeasureRangeEnd(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setMeasureUnit(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setTextSwitchOn(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setInverted(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setTextSwitchOff(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setFunc(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setRange(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setDefaultRef(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setIoa1(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setIoa2(new BigInteger(SECOND_BITS, random).toString(BASE));
+        plc.setIoa3(new BigInteger(SECOND_BITS, random).toString(BASE));
+
+        plc.setCustom1(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom2(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom3(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom4(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom5(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom6(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom7(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom8(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom9(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom10(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom11(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom12(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom13(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom14(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom15(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom16(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom17(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom18(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom19(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom20(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom21(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom22(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom23(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom24(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom25(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom26(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom27(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom28(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom29(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom30(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+
+        return plc;
+    }
+
+    private static Plc[] generateRandomPlcs(int amount) {
+        Plc[] plcs = new Plc[amount];
+        for (int i = 0; i < amount; i++)
+            plcs[i] = generateRandomPlc();
+        return plcs;
+    }
+
+
+    private void modifyPlc(Plc plc) {
+        final int FRIST_BITS = 100;
+        final int CUSTOM_BITS = 150;
+        final int BASE = 32;
+
+        plc.setCpuNumber(new BigInteger(FRIST_BITS, random).toString(BASE));
+        plc.setChannelName(new BigInteger(FRIST_BITS, random).toString(BASE));
+        plc.setRackId(new BigInteger(FRIST_BITS, random).toString(BASE));
+        plc.setPosition(new BigInteger(FRIST_BITS, random).toString(BASE));
+        plc.setKks0(new BigInteger(FRIST_BITS, random).toString(BASE));
+        plc.setKks1(new BigInteger(FRIST_BITS, random).toString(BASE));
+        plc.setKks2(new BigInteger(FRIST_BITS, random).toString(BASE));
+        plc.setKks3(new BigInteger(FRIST_BITS, random).toString(BASE));
+
+        plc.setCustom1(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom2(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom3(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom4(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom5(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom6(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom7(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom8(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom9(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        plc.setCustom10(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+    }
+
 }
