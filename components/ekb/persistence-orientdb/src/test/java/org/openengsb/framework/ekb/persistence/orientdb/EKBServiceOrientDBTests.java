@@ -51,7 +51,7 @@ public class EKBServiceOrientDBTests {
         createDatabaseAndSchema();
         service = new EKBServiceOrientDB();
         service.setDatabase(OrientDBHelper.getDefault().getConnection());
-        service.setUIIDIndexSupportEnabled(false);
+        service.setUIIDIndexSupportEnabled(true);
         random = new Random(4711);
     }
 
@@ -77,6 +77,7 @@ public class EKBServiceOrientDBTests {
 
         generator.addModel(ComplexModel.class);
         generator.addModel(Plc.class);
+        generator.addModel(Elp.class);
 
         database.close();
     }
@@ -556,22 +557,57 @@ public class EKBServiceOrientDBTests {
 
     @Test
     public void testCommitPerformance_plcInParallel() {
-        final int THREADS = 1;
+        final int THREADS = 2;
         final int ENTITIES = 10000;
         Plc[] plcs = generateRandomPlcs(ENTITIES);
+        Elp[] elps = generateRandomElps(ENTITIES);
 
-        EKBCommit[] commitsInsert = createParallelCommits(THREADS, ENTITIES, plcs, OperationType.INSERT);
-        EKBCommit[] commitsUpdate = createParallelCommits(THREADS, ENTITIES, plcs, OperationType.UPDATE);
+        EKBCommit[] commitsInsertPlc = createParallelCommits(THREADS, ENTITIES, plcs, OperationType.INSERT);
+        EKBCommit[] commitsInsertElp = createParallelCommits(THREADS, ENTITIES, elps, OperationType.INSERT);
+        EKBCommit[] commitsUpdatePlc = createParallelCommits(THREADS, ENTITIES, plcs, OperationType.UPDATE);
         EKBCommit[] commitsDelete = createParallelCommits(THREADS, ENTITIES, plcs, OperationType.DELETE);
 
-        long insertTime = runParallelCommits(commitsInsert);
-        System.out.println("inserted " + ENTITIES + " objects using " + THREADS + " threads in " + insertTime + " ms");
+        long insertTime = runParallelCommits(commitsInsertPlc);
+        System.out.println("inserted " + ENTITIES + " plc splitted into " + THREADS + " commits in " +
+                insertTime + " ms");
 
-        long updateTime = runParallelCommits(commitsUpdate);
-        System.out.println("updated  " + ENTITIES + " objects using " + THREADS + " threads in " + updateTime + " ms");
+        for(Plc plc : plcs) {
+            modifyPlc(plc);
+        }
+        long updateTime = runParallelCommits(commitsUpdatePlc);
+        System.out.println("updated  " + ENTITIES + " plc splitted into " + THREADS + " commits in " +
+                updateTime + " ms");
+
+        long insertTime2 = runParallelCommits(commitsInsertElp);
+        System.out.println("inserted " + ENTITIES + " elp splitted into " + THREADS + " commits in " +
+                insertTime2 + " ms");
 
         long deleteTime = runParallelCommits(commitsDelete);
-        System.out.println("deleted  " + ENTITIES + " objects using " + THREADS + " threads in " + deleteTime + " ms");
+        System.out.println("deleted  " + ENTITIES + " plc splitted into " + THREADS + " commits in " +
+                deleteTime + " ms");
+
+
+        /*
+            index enabled
+
+            one thread
+            inserted 10000 plc splitted into 1 commits in 8379 ms
+            updated  10000 plc splitted into 1 commits in 8971 ms
+            inserted 10000 elp splitted into 1 commits in 6914 ms
+            deleted  10000 plc splitted into 1 commits in 3557 ms
+
+            two threads
+            inserted 10000 plc splitted into 2 commits in 5685 ms
+            updated  10000 plc splitted into 2 commits in 6237 ms
+            inserted 10000 elp splitted into 2 commits in 4592 ms
+            deleted  10000 plc splitted into 2 commits in 2364 ms
+
+            four threads
+            inserted 10000 plc splitted into 4 commits in 5391 ms
+            updated  10000 plc splitted into 4 commits in 7394 ms
+            inserted 10000 elp splitted into 4 commits in 4502 ms
+            deleted  10000 plc splitted into 4 commits in 2772 ms
+         */
     }
 
     @Test
@@ -579,52 +615,90 @@ public class EKBServiceOrientDBTests {
         final int COMMITS = 1;
         final int ENTITIES = 10000;
         Plc[] plcs = generateRandomPlcs(ENTITIES);
+        Elp[] elps = generateRandomElps(ENTITIES);
+        Relationship[] relationships = generateRandomRelationships(plcs, elps, ENTITIES);
 
-        EKBCommit[] commitsInsert = createParallelCommits(COMMITS, ENTITIES, plcs, OperationType.INSERT);
-        EKBCommit[] commitsUpdate = createParallelCommits(COMMITS, ENTITIES, plcs, OperationType.UPDATE);
+        EKBCommit[] commitsInsertPlc = createParallelCommits(COMMITS, ENTITIES, plcs, OperationType.INSERT);
+        EKBCommit[] commitsInsertElp = createParallelCommits(COMMITS, ENTITIES, elps, OperationType.INSERT);
+        EKBCommit[] commitsUpdatePlc = createParallelCommits(COMMITS, ENTITIES, plcs, OperationType.UPDATE);
         EKBCommit[] commitsDelete = createParallelCommits(COMMITS, ENTITIES, plcs, OperationType.DELETE);
+        EKBCommit[] commitsInsertRelationships = createParallelCommits(COMMITS, ENTITIES, relationships,
+                OperationType.INSERT_RELATIONSHIP);
+        EKBCommit[] commitsDeleteRelationships = createParallelCommits(COMMITS, ENTITIES, relationships,
+                OperationType.DELETE_RELATIONSHIP);
 
-        long insertTime = runSequentialCommits(commitsInsert);
-        System.out.println("inserted " + ENTITIES + " objects splitted into " + COMMITS + " commits in " +
+
+        long insertTime = runSequentialCommits(commitsInsertPlc);
+        System.out.println("inserted " + ENTITIES + " plc splitted into " + COMMITS + " commits in " +
             insertTime + " ms");
 
-        long updateTime = runSequentialCommits(commitsUpdate);
-        System.out.println("updated  " + ENTITIES + " objects splitted into " + COMMITS + " commits in " +
+        for(Plc plc : plcs) {
+            modifyPlc(plc);
+        }
+        long updateTime = runSequentialCommits(commitsUpdatePlc);
+        System.out.println("updated  " + ENTITIES + " plc splitted into " + COMMITS + " commits in " +
             updateTime + " ms");
 
+        long insertTime2 = runSequentialCommits(commitsInsertElp);
+        System.out.println("inserted " + ENTITIES + " elp splitted into " + COMMITS + " commits in " +
+                insertTime2 + " ms");
+
+        long insertRelTime = runSequentialCommits(commitsInsertRelationships);
+        System.out.println("inserted " + ENTITIES + " relationships splitted into " + COMMITS + " commits in " +
+                insertRelTime + " ms");
+
+        long deleteRelTime = runSequentialCommits(commitsDeleteRelationships);
+        System.out.println("deleted " + ENTITIES + " relationships splitted into " + COMMITS + " commits in " +
+                deleteRelTime + " ms");
+
         long deleteTime = runSequentialCommits(commitsDelete);
-        System.out.println("deleted  " + ENTITIES + " objects splitted into " + COMMITS + " commits in " +
+        System.out.println("deleted  " + ENTITIES + " plc splitted into " + COMMITS + " commits in " +
             deleteTime + " ms");
 
-        /*
-            with massiveInsertIntent
-            inserted 10000 objects splitted into 1 commits in 7154 ms
-            updated  10000 objects splitted into 1 commits in 10363 ms
-            deleted  10000 objects splitted into 1 commits in 3896 ms
 
-            without massiveInsertIntent
-            inserted 10000 objects splitted into 1 commits in 7826 ms
-            updated  10000 objects splitted into 1 commits in 6056 ms
-            deleted  10000 objects splitted into 1 commits in 2056 ms
+        /*
+            with index
+            inserted 10000 plc splitted into 1 commits in            8173 ms
+            updated  10000 plc splitted into 1 commits in            6310 ms
+            inserted 10000 elp splitted into 1 commits in            7061 ms
+            inserted 10000 relationships splitted into 1 commits in  8859 ms
+            deleted  10000 relationships splitted into 1 commits in  4849 ms
+            deleted  10000 plc splitted into 1 commits in            2474 ms
 
             without index
-            inserted 10000 objects splitted into 1 commits in 7514 ms
-            updated  10000 objects splitted into 1 commits in 6094 ms
-            deleted  10000 objects splitted into 1 commits in 1855 ms
+            inserted 10000 plc splitted into 1 commits in            7695 ms
+            updated  10000 plc splitted into 1 commits in            6250 ms
+            inserted 10000 elp splitted into 1 commits in            6826 ms
+            inserted 10000 relationships splitted into 1 commits in  8740 ms
+            deleted  10000 relationships splitted into 1 commits in  4428 ms
+            deleted  10000 plc splitted into 1 commits in            2179 ms
+
+            with massiveInsertIntent and index
+            inserted 10000 plc splitted into 1 commits in            7802 ms
+            updated  10000 plc splitted into 1 commits in           10869 ms
+            inserted 10000 elp splitted into 1 commits in            6603 ms
+            inserted 10000 relationships splitted into 1 commits in  9453 ms
+            deleted  10000 relationships splitted into 1 commits in  9922 ms
+            deleted  10000 plc splitted into 1 commits in            3901 ms
          */
     }
 
 
-    public EKBCommit[] createParallelCommits(final int THREADS, final int ENTITIES, Plc[] plcs, OperationType type) {
+
+    public <T> EKBCommit[] createParallelCommits(final int THREADS, final int ENTITIES, T[] models,
+            OperationType type) {
         EKBCommit[] commits = new EKBCommit[THREADS];
         for (int i = 0; i < THREADS; i++) {
             commits[i] = new EKBCommitImpl();
             for (int j = ENTITIES/THREADS * i; j < ENTITIES/THREADS * (i + 1); j++) {
-                commits[i].addOperation(new Operation(type, plcs[j]));
+                commits[i].addOperation(new Operation(type, models[j]));
             }
         }
         return commits;
     }
+
+
+
 
     public long runParallelCommits(EKBCommit[] commits) {
         long start = System.currentTimeMillis();
@@ -737,7 +811,6 @@ public class EKBServiceOrientDBTests {
 
         return plc;
     }
-
     private static Plc[] generateRandomPlcs(int amount) {
         Plc[] plcs = new Plc[amount];
         for (int i = 0; i < amount; i++)
@@ -745,6 +818,93 @@ public class EKBServiceOrientDBTests {
         return plcs;
     }
 
+    private static Elp generateRandomElp() {
+        Elp elp = new Elp();
+        final int FIRST_BITS = 50;
+        final int SECOND_BITS = 50;
+        final int CUSTOM_BITS = 50;
+        final int BASE = 32;
+
+        elp.setUuid(UUID.randomUUID().toString());
+        elp.setProject(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setRegion(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setComponentNumber(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setCpuNumber(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setChannelName(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setRackId(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setPosition(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setKks0(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setKks1(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setKks2(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setKks3(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setLongText(new BigInteger(500, random).toString(BASE));
+        elp.setStatus(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setPhysicalPin(new BigInteger(FIRST_BITS, random).toString(BASE));
+        elp.setPlacement(new BigInteger(FIRST_BITS, random).toString(BASE));
+
+
+        elp.setSw(new BigInteger(SECOND_BITS, random).toString(BASE));
+        elp.setPins(Arrays.asList(
+                new BigInteger(SECOND_BITS, random).toString(BASE),
+                new BigInteger(SECOND_BITS, random).toString(BASE),
+                new BigInteger(SECOND_BITS, random).toString(BASE),
+                new BigInteger(SECOND_BITS, random).toString(BASE),
+                new BigInteger(SECOND_BITS, random).toString(BASE),
+                new BigInteger(SECOND_BITS, random).toString(BASE),
+                new BigInteger(SECOND_BITS, random).toString(BASE),
+                new BigInteger(SECOND_BITS, random).toString(BASE),
+                new BigInteger(SECOND_BITS, random).toString(BASE),
+                new BigInteger(SECOND_BITS, random).toString(BASE)
+        ));
+
+        elp.setCustom1(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom2(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom3(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom4(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom5(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom6(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom7(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom8(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom9(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom10(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom11(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom12(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom13(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom14(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom15(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom16(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom17(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom18(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom19(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom20(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom21(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom22(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom23(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom24(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom25(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom26(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom27(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom28(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom29(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+        elp.setCustom30(new BigInteger(CUSTOM_BITS, random).toString(BASE));
+
+        return elp;
+    }
+    private static Elp[] generateRandomElps(int amount) {
+        Elp[] elps = new Elp[amount];
+        for (int i = 0; i < amount; i++)
+            elps[i] = generateRandomElp();
+        return elps;
+    }
+
+
+    private Relationship[] generateRandomRelationships(Plc[] pcls, Elp[] elps, int count) {
+        Relationship[] relationships = new Relationship[count];
+        for (int i = 0; i < count; i++)
+            relationships[i] = new RelationshipImpl("related",
+                pcls[random.nextInt(pcls.length)], elps[random.nextInt(pcls.length)]);
+        return relationships;
+    }
 
     private void modifyPlc(Plc plc) {
         final int FRIST_BITS = 100;
@@ -771,5 +931,10 @@ public class EKBServiceOrientDBTests {
         plc.setCustom9(new BigInteger(CUSTOM_BITS, random).toString(BASE));
         plc.setCustom10(new BigInteger(CUSTOM_BITS, random).toString(BASE));
     }
+
+    // LIMITATION OF CURRENT RELATIONSHIP NAMING FOUND WHEN INSTANCES OF THE SAME MODEL ARE RELATED
+    // for example a Person is related to another Person
+    // this does not work right now because of the relationship link names being equal
+
 
 }

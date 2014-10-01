@@ -98,7 +98,7 @@ public class EKBServiceOrientDB {
         v_currentEntity.field("commit", v_commit);
 
         v_history.field("createdBy", v_commit);
-        v_history.field("deleteBy", (ODocument) null);
+        v_history.field("deletedBy", (ODocument) null);
         v_history.field("archived", false);
         v_history.field("current", v_currentEntity);
         v_history.field("last", v_currentRevision);
@@ -188,7 +188,7 @@ public class EKBServiceOrientDB {
 
         // update history
         v_history.field("archived", true);
-        v_history.field("deleteBy", v_commit);
+        v_history.field("deletedBy", v_commit);
         v_history.field("current", (ODocument) null);
         v_history.save();
 
@@ -199,7 +199,7 @@ public class EKBServiceOrientDB {
             ODocument r_revision = r_current.field("revision");
 
             // update the revision of this relationship - set deletedBy property to the current commit
-            r_revision.field("deleteBy", v_commit);
+            r_revision.field("deletedBy", v_commit);
             r_revision.removeField("current");
             r_revision.save();
             ((List<ODocument>) v_commit.field("deletedRelationships")).add(r_revision);
@@ -614,6 +614,7 @@ public class EKBServiceOrientDB {
 
     //@Override
     public void commit(EKBCommit ekbCommit) {
+        //database.declareIntent(new OIntentMassiveInsert());
         Date timestamp = new Date();
         ODocument v_commit = createCommitVertex(ekbCommit, timestamp, null);
 
