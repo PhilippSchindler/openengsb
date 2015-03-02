@@ -89,7 +89,7 @@ public class OrientDBHelper {
             helper.setUser("admin");
             helper.setPassword("admin");
             helper.setStorageType("plocal");
-            helper.setConnectionURL("plocal:/temp/db");
+            helper.setConnectionURL("plocal:F:\\orientdb-embedded\\");
             embeddedHelper = helper;
             return helper;
         }

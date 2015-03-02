@@ -80,7 +80,7 @@ public class BenchmarkTests {
     @Test
     public void testScenarioLoader_testScenario() throws IOException
     {
-        executeScenario(1, 1000);
+        executeScenario(1, 100000);
     }
 
 
@@ -94,9 +94,15 @@ public class BenchmarkTests {
         {
             EKBCommit commit = ScenarioLoader.loadCommit(baseFolder, scenario, commitNr);
 
-            // start performance measurement here TODO
+
+            long startTime = System.currentTimeMillis();
+
+
             service.commit(commit);
-            // stop performance measurement here
+
+            long endTime = System.currentTimeMillis();
+
+            System.out.println("commit " + commitNr + " executed in " + (endTime - startTime)/1000 + "s");
 
             // execute queries and gather query performance measurements TODO
         }

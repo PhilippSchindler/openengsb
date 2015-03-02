@@ -82,7 +82,7 @@ public class EKBServiceOrientDB {
         this.database = database;
     }
 
-    private ODocument performInsertOperation(Operation operation, ODocument v_commit) {
+    private ORID performInsertOperation(Operation operation, ODocument v_commit, List<ORID> insertedRIDs) {
         OpenEngSBModel model = operation.getModel();
         ODocument v_currentEntity = database.newInstance(getModelClassName(model));
         ODocument v_history = database.newInstance(getModelClassName(model) + "History");
@@ -112,20 +112,20 @@ public class EKBServiceOrientDB {
         v_currentRevision.field("commit", v_commit);
         v_currentRevision.field("history", v_history);
 
-        v_history.save();
-        v_currentEntity.save();
-        v_currentRevision.save();
-
         v_currentEntity.field("uiid", model.retrieveInternalModelId());
         v_history.field("uiid", model.retrieveInternalModelId());
 
+        // v_currentEntity.save();
+        v_history.save();                   // saves connected records as well
+        // v_currentRevision.save();
+
         addToIndex(model, v_currentEntity);
 
-        ((List<ODocument>) v_commit.field("inserts")).add(v_history);
-        return v_currentEntity;
+        insertedRIDs.add(v_history.getIdentity());
+        return v_currentEntity.getIdentity();
     }
 
-    private void performUpdateOperation(Operation operation, ODocument v_commit) {
+    private void performUpdateOperation(Operation operation, ODocument v_commit, List<ORID> updatedRIDs) {
         OpenEngSBModel model = operation.getModel();
         ODocument v_currentEntity = loadCurrentDocumentForModel(model);
         ODocument v_history = v_currentEntity.field("history");
@@ -172,15 +172,16 @@ public class EKBServiceOrientDB {
         v_currentRevision.field("prev", v_previousRevision);
         v_previousRevision.field("next", v_currentRevision);
 
-        v_currentEntity.save();
-        v_history.save();
-        v_currentRevision.save();
-        v_previousRevision.save();
+        // v_currentEntity.save();
+        v_history.save();                   // saves connected vertices as well
+        // v_currentRevision.save();
+        // v_previousRevision.save();
 
-        ((List<ODocument>) v_commit.field("updates")).add(v_currentRevision);
+
+        updatedRIDs.add(v_currentRevision.getIdentity());
     }
 
-    private void performDeleteOperation(Operation operation, ODocument v_commit) {
+    private void performDeleteOperation(Operation operation, ODocument v_commit, List<ORID> deletedRIDs) {
         OpenEngSBModel model = operation.getModel();
 
         ODocument v_currentEntity = loadCurrentDocumentForModel(model);
@@ -221,10 +222,10 @@ public class EKBServiceOrientDB {
         v_currentEntity.delete();
         updateIndex(model, v_history);
 
-        ((List<ODocument>) v_commit.field("deletes")).add(v_history);
+        deletedRIDs.add(v_history.getIdentity());
     }
 
-    private ODocument performRelationshipInsertOperation(Operation operation, ODocument v_commit) {
+    private ORID performRelationshipInsertOperation(Operation operation, ODocument v_commit) {
         OpenEngSBModel model = operation.getModel();
         Relationship relationship = (Relationship) model;
 
@@ -263,7 +264,7 @@ public class EKBServiceOrientDB {
         addToIndex(model, r_current);
 
         ((List<ODocument>) v_commit.field("insertedRelationships")).add(r_revision);
-        return r_current;
+        return r_current.getIdentity();
     }
 
     private void performRelationshipDeleteOperation(Operation operation, ODocument v_commit) {
@@ -328,18 +329,18 @@ public class EKBServiceOrientDB {
         }
     }
 
-    private void storeGeneratedRIDsBack(EKBCommit commit, List<ODocument> insertedModels,
-            List<ODocument> insertedRelationships) {
+    private void storeGeneratedRIDsBack(EKBCommit commit, List<ORID> insertedModels,
+            List<ORID> insertedRelationships) {
         if (isRIDSupportEnabled) {
             // store rid's back for future updates/deletes
             int i = 0;
             for (Operation operation : commit.getOperations(OperationType.INSERT)) {
-                setRID(operation.getModel(), insertedModels.get(i).getIdentity());
+                setRID(operation.getModel(), insertedModels.get(i));
                 i++;
             }
             i = 0;
             for (Operation operation : commit.getOperations(OperationType.INSERT_RELATIONSHIP)) {
-                setRID(operation.getModel(), insertedRelationships.get(i).getIdentity());
+                setRID(operation.getModel(), insertedRelationships.get(i));
                 i++;
             }
         }
@@ -475,11 +476,8 @@ public class EKBServiceOrientDB {
             v_parentCommit.field("next", v_commit);
         }
 
-        v_commit.field("inserts", new ArrayList<ODocument>());
-        v_commit.field("updates", new ArrayList<ODocument>());
-        v_commit.field("deletes", new ArrayList<ODocument>());
-        v_commit.field("insertedRelationships", new ArrayList<ODocument>());
-        v_commit.field("deletedRelationships", new ArrayList<ODocument>());
+        v_commit.field("insertedRelationships", new ArrayList<ORID>());
+        v_commit.field("deletedRelationships", new ArrayList<ORID>());
 
         return v_commit;
     }
@@ -618,10 +616,14 @@ public class EKBServiceOrientDB {
         Date timestamp = new Date();
         ODocument v_commit = createCommitVertex(ekbCommit, timestamp, null);
 
-        List<ODocument> v_inserted = new ArrayList<>();
-        List<ODocument> v_insertedRelationships = new ArrayList<>();
+        List<ORID> v_inserted = new ArrayList<>();
+        List<ORID> v_insertedRelationships = new ArrayList<>();
         List<Operation> insertOperations = ekbCommit.getOperations(OperationType.INSERT);
         List<Operation> insertRelationshipOperations = ekbCommit.getOperations(OperationType.INSERT_RELATIONSHIP);
+
+        List<ORID> insertedRIDs = new ArrayList<>();
+        List<ORID> updatedRIDs = new ArrayList<>();
+        List<ORID> deletedRIDs = new ArrayList<>();
 
         initCommit();
 
@@ -630,22 +632,29 @@ public class EKBServiceOrientDB {
         }
 
         for (Operation operation : ekbCommit.getOperations(OperationType.DELETE)) {
-            performDeleteOperation(operation, v_commit);
+            performDeleteOperation(operation, v_commit, deletedRIDs);
         }
 
         for (Operation operation : ekbCommit.getOperations(OperationType.UPDATE)) {
-            performUpdateOperation(operation, v_commit);
+            performUpdateOperation(operation, v_commit, updatedRIDs);
         }
 
         for (Operation operation : insertOperations) {
-            v_inserted.add(performInsertOperation(operation, v_commit));
+            v_inserted.add(performInsertOperation(operation, v_commit, insertedRIDs));
         }
 
         for (Operation operation : insertRelationshipOperations) {
             v_insertedRelationships.add(performRelationshipInsertOperation(operation, v_commit));
         }
 
+
+        v_commit.field("inserts", insertedRIDs);
+        v_commit.field("updates", updatedRIDs);
+        v_commit.field("deletes", deletedRIDs);
         v_commit.save();
+
+
+
         database.commit();
 
         storeGeneratedRIDsBack(ekbCommit, v_inserted, v_insertedRelationships);
