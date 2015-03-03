@@ -90,7 +90,8 @@ public class EKBServiceOrientDB {
 
         // adding the newly created entity to the map of cachedDocuments, so we can use the document instance it in the
         // current commit for inserting relationships
-        cachedDocuments.put(model, v_currentEntity);
+        // cachedDocuments.put(model, v_currentEntity);            // TODO removed for descreasing memory footprint
+                                                                   // may impact relationships !!!
 
         // copy the data from the model into the v_currentEntity
         convertModel(model, v_currentEntity);
@@ -437,7 +438,7 @@ public class EKBServiceOrientDB {
         ORID rid = getRID(model);
         if (rid != null) {
             ODocument loadedDocument = database.load(rid);
-            cachedDocuments.put(model, loadedDocument);
+            // cachedDocuments.put(model, loadedDocument);              // TODO check (see other comment)
             return loadedDocument;
         }
 

@@ -80,7 +80,7 @@ public class BenchmarkTests {
     @Test
     public void testScenarioLoader_testScenario() throws IOException
     {
-        executeScenario(1, 100000);
+        executeScenario(1, 1000000);
     }
 
 
