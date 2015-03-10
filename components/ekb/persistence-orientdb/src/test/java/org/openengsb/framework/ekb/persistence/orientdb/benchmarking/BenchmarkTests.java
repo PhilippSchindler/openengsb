@@ -92,18 +92,19 @@ public class BenchmarkTests {
 
         for (int commitNr = 0; commitNr < numCommits; commitNr++)
         {
+            System.out.println("loading data for commit " + commitNr);
             EKBCommit commit = ScenarioLoader.loadCommit(baseFolder, scenario, commitNr);
 
 
+            System.out.println("executing commit " + commitNr);
+
             long startTime = System.currentTimeMillis();
-
-
             service.commit(commit);
-
             long endTime = System.currentTimeMillis();
 
             System.out.println("commit " + commitNr + " executed in " + (endTime - startTime)/1000 + "s");
 
+            System.out.println();
             // execute queries and gather query performance measurements TODO
         }
     }
