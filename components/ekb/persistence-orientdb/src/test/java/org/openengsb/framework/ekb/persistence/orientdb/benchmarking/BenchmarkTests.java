@@ -7,12 +7,13 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.openengsb.core.ekb.api.*;
 import org.openengsb.framework.ekb.persistence.orientdb.*;
 import org.openengsb.framework.ekb.persistence.orientdb.EKBCommit;
+import org.openengsb.framework.ekb.persistence.orientdb.benchmarking.models.Eplan;
+import org.openengsb.framework.ekb.persistence.orientdb.benchmarking.models.Opm;
+import org.openengsb.framework.ekb.persistence.orientdb.benchmarking.models.Vcdm;
 import org.openengsb.framework.ekb.persistence.orientdb.visualization.DotExporter;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
@@ -48,7 +49,13 @@ public class BenchmarkTests {
         SchemaGenerator generator = new SchemaGenerator();
         generator.setDatabase(database);
         generator.generateVersioningSchema();
-        generator.addModel(Signal.class);
+
+        // ADD MODELS HERE (classes in database are created...)
+
+        generator.addModel(Eplan.class);
+        generator.addModel(Vcdm.class);
+        generator.addModel(Opm.class);
+
 
         database.close();
     }
@@ -80,7 +87,7 @@ public class BenchmarkTests {
     @Test
     public void testScenarioLoader_testScenario() throws IOException
     {
-        executeScenario(1, 1000000);
+        executeScenario(1, 100);
     }
 
 
@@ -105,9 +112,10 @@ public class BenchmarkTests {
             System.out.println("commit " + commitNr + " executed in " + (endTime - startTime)/1000 + "s");
 
             System.out.println();
-            // execute queries and gather query performance measurements TODO
         }
     }
+
+
 
 
 

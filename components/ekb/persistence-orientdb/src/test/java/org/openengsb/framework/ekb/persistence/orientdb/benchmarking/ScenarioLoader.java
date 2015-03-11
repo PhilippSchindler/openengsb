@@ -4,6 +4,9 @@ import org.openengsb.framework.ekb.persistence.orientdb.EKBCommit;
 import org.openengsb.framework.ekb.persistence.orientdb.EKBCommitImpl;
 import org.openengsb.framework.ekb.persistence.orientdb.Operation;
 import org.openengsb.framework.ekb.persistence.orientdb.OperationType;
+import org.openengsb.framework.ekb.persistence.orientdb.benchmarking.models.Eplan;
+import org.openengsb.framework.ekb.persistence.orientdb.benchmarking.models.Opm;
+import org.openengsb.framework.ekb.persistence.orientdb.benchmarking.models.Vcdm;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -17,7 +20,6 @@ import java.nio.file.Paths;
 public class ScenarioLoader {
 
     public static EKBCommit loadCommit(String baseFolderPath, int scenarioNumber, int commitNumber)
-            throws IOException
     {
         EKBCommit commit = new EKBCommitImpl();
 
@@ -30,9 +32,13 @@ public class ScenarioLoader {
         String updatesCsv = Paths.get(baseFolderPath, "scenario_" + scenarioNumber,
                 String.format("scenario_%d_commit_%d_updates.csv", scenarioNumber, commitNumber)).toString();
 
-        addCommitOperations(insertsCsv, OperationType.INSERT, commit);
-        addCommitOperations(deletesCsv, OperationType.DELETE, commit);
-        addCommitOperations(updatesCsv, OperationType.UPDATE, commit);
+        try {
+            addCommitOperations(insertsCsv, OperationType.INSERT, commit);
+            addCommitOperations(deletesCsv, OperationType.DELETE, commit);
+            addCommitOperations(updatesCsv, OperationType.UPDATE, commit);
+        } catch (IOException e) {
+            return null;
+        }
 
         return commit;
     }
@@ -48,13 +54,23 @@ public class ScenarioLoader {
         {
             String[] parts = line.split(";");
 
-            Signal signal = new Signal();
-            signal.setRID(parts[0]);
-            signal.setSigNr(parts[1]);
-            signal.setFuncText(parts[2]);
-            signal.setAddress(parts[3]);
+            Eplan eplan = new Eplan();
+            eplan.setRID(parts[0]);
+            eplan.setSignal_number(parts[1]);
+            eplan.setFunc_text(parts[2]);
+            eplan.setAddress(parts[3]);
 
-            commit.addOperation(new Operation(operationType, signal));
+            Vcdm vcdm = new Vcdm(eplan);
+            // set record id based on the id of eplan - change orientdb cluster by 2 (gives cluster of vcdm)
+            vcdm.setRID((Integer.parseInt(eplan.getRID().split(":")[0]) + 2) + ":" + eplan.getRID().split(":")[1]);
+
+            Opm opm = new Opm(vcdm);
+            // set record id based on the id of eplan - change orientdb cluster by 4 (gives cluster of opm)
+            opm.setRID((Integer.parseInt(eplan.getRID().split(":")[0]) + 4) + ":" + eplan.getRID().split(":")[1]);
+
+            commit.addOperation(new Operation(operationType, eplan));
+            commit.addOperation(new Operation(operationType, vcdm));
+            commit.addOperation(new Operation(operationType, opm));
         }
 
         br.close();

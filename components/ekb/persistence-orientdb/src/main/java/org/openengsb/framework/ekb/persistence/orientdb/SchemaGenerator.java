@@ -64,9 +64,10 @@ public class SchemaGenerator {
         entity = schema.createAbstractClass("Entity", V);
 
         commit.createProperty("timestamp", OType.DATETIME);
-        commit.createProperty("inserts", OType.LINKLIST, history);
-        commit.createProperty("updates", OType.LINKLIST, revision);
-        commit.createProperty("deletes", OType.LINKLIST, history);
+        // replaced by inserts_eplan, inserts_opm...
+        //commit.createProperty("inserts", OType.LINKLIST, history);
+        //commit.createProperty("updates", OType.LINKLIST, revision);
+        //commit.createProperty("deletes", OType.LINKLIST, history);
         commit.createProperty("insertedRelationships", OType.LINKLIST, relationship);
         commit.createProperty("deletedRelationships", OType.LINKLIST, relationship);
         commit.createProperty("parent", OType.LINK, commit);
