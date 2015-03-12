@@ -1,6 +1,9 @@
 package org.openengsb.framework.ekb.persistence.orientdb.benchmarking;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
+import com.orientechnologies.orient.core.metadata.schema.OClass;
+import com.orientechnologies.orient.core.metadata.schema.OSchema;
+import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.commons.io.FileUtils;
@@ -36,14 +39,17 @@ public class Benchmarking {
     String DISK_USAGE_DETAILS = "disk-usage-details.csv";
 
     final String DATABASE_NAME = "engineering-db";
-    final boolean EMBEDDED_MODE = false;
+    final boolean EMBEDDED_MODE = true;
+    final boolean CREATE_INDICES = true;
+
+    public final String COMMIT_ID_PREFIX = "#11:"; // cluster id for commit vertices
+    public static final String EPLAN_ID_PREFIX  = "#13:";
+    public static final String VCDM_ID_PREFIX   = "#16:";
+    public static final String OPM_ID_PREFIX    = "#19:";
+
 
     EKBServiceOrientDB _service;
 
-    String[] _queries = new String[]
-    {
-
-    };
 
     public Benchmarking(String[] cmdArgs) throws IllegalArgumentException {
         if (!parseArgs(cmdArgs)) {
@@ -125,6 +131,9 @@ public class Benchmarking {
                     _currentScenario, _currentCommit);
             if (commit == null) return;
 
+
+            Runtime.getRuntime().gc();
+
             System.out.println("executing commit");
             long startTime = System.currentTimeMillis();
 
@@ -134,6 +143,10 @@ public class Benchmarking {
             long delta = endTime - startTime;
             System.out.println("commit executed in " + delta/1000 + "s");
             append(COMMIT_PERFORMANCE, delta);
+
+
+            long memory = Runtime.getRuntime().totalMemory();
+            System.out.println(String.format("memory usage (heap): %d MB", memory/1024/1024));
 
             queries();
             recordCounts();
@@ -196,19 +209,149 @@ public class Benchmarking {
 
     void queries() {
         System.out.println("running queries");
-        for (int i = 0; i < _queries.length; i++ ) {
-            long before = System.currentTimeMillis();
-            query(_queries[i]);
-            long after = System.currentTimeMillis();
-            long delta = after - before;
-            append(QUERY_PERFORMANCE, i, delta);
-        }
+
+        long delta;
+        delta = query01(); append(QUERY_PERFORMANCE, 1, delta);
+        delta = query02(); append(QUERY_PERFORMANCE, 2, delta);
+        delta = query03(); append(QUERY_PERFORMANCE, 3, delta);
+        delta = query04(); append(QUERY_PERFORMANCE, 4, delta);
+        delta = query05(); append(QUERY_PERFORMANCE, 5, delta);
+        delta = query06(); append(QUERY_PERFORMANCE, 6, delta);
+        delta = query07(); append(QUERY_PERFORMANCE, 7, delta);
     }
+
+    // how many changes, deletions, and insertions have been made so far (over all commits)
+    long query01() {
+
+        String cmd =
+            "select sum(inserts_eplan.size()), sum(updates_eplan.size()), sum(deletes_eplan.size()) " +
+            "from Commit";
+
+        long before = System.currentTimeMillis();
+
+        query(cmd);
+
+        long after = System.currentTimeMillis();
+        return after - before;
+    }
+
+    // how many changes, deletions, and insertions have been made grouped by commit
+    // => in real world example, I would use a day or a week basis instead of commits
+    long query02() {
+
+        String cmd =
+            "select @rid, inserts_eplan.size(), updates_eplan.size(), deletes_eplan.size() from Commit";
+
+        long before = System.currentTimeMillis();
+
+        query(cmd);
+
+        long after = System.currentTimeMillis();
+        return after - before;
+    }
+
+    // how many changes, deletions, and insertions have been made in contrast to the previous commit
+    // => i.e. what has changed since e.g., yesterday
+    long query03() {
+
+        String commitId = COMMIT_ID_PREFIX + _currentCommit;
+        String cmd = String.format(
+            "select inserts_eplan.size(), updates_eplan.size(), deletes_eplan.size() from %s",
+            commitId);
+
+        long before = System.currentTimeMillis();
+
+        query(cmd);
+
+        long after = System.currentTimeMillis();
+        return after - before;
+    }
+
+    // number of elements grouped by component and commit
+    long query04() {
+
+        String cmd =
+            "select @rid as commit, $i as insertsByComponent, $u as updatesByComponent, $d as deletesByComponent from Commit "
+          + "let "
+          + "    $i = (select value as comp, count(*) as inserts from (select expand(inserts_vcdm.last.kks3) from $parent.$current) group by value)), "
+          + "    $u = (select value as comp, count(*) as updates from (select expand(updates_vcdm.kks3) from $parent.$current) group by value)), "
+          + "    $d = (select value as comp, count(*) as deletes from (select expand(deletes_vcdm.last.kks3) from $parent.$current) group by value)) ";
+
+        long before = System.currentTimeMillis();
+
+        query(cmd);
+
+        long after = System.currentTimeMillis();
+        return after - before;
+    }
+
+    // 5.) retrieve all elements of "*.XQ05" after last commit
+    long query05() {
+
+        String commitId = COMMIT_ID_PREFIX + _currentCommit;
+
+        String cmd = String.format(
+            "select expand($combined) "
+          + "let $inserts = (select from ( select expand(inserts_vcdm.last) from %s) where kks3 = 'XQ05'), "
+          + "    $updates = (select from ( select expand(inserts_vcdm)      from %s) where kks3 = 'XQ05'), "
+          + "    $deletes = (select from ( select expand(inserts_vcdm.last) from %s) where kks3 = 'XQ05'), "
+          + "    $combined = unionall( $inserts, $updates, $deletes )",
+            commitId, commitId, commitId);
+
+        long before = System.currentTimeMillis();
+
+        query(cmd);
+
+        long after = System.currentTimeMillis();
+        return after - before;
+    }
+
+    // 6.) how often has a specific entry been updated => e.g., with signal number 13.ACA00.CE000.XQ67
+    long query06() {
+
+        // if we know there is a current version
+        String cmd =
+            "select eval('history.revisions.size() - 1') as changeCount from Eplan " +
+            "where signal_number = '13.ACA00.CE000.XQ67'";
+
+        // if we don't know if it has been deleted
+        // String cmd =
+        //    "select eval('revisions.size() - 1'), @rid as changeCount from EplanHistory " +
+        //    "where last.signal_number = '13.ACA00.CE000.XQ67'";
+
+        long before = System.currentTimeMillis();
+
+        query(cmd);
+
+        long after = System.currentTimeMillis();
+        return after - before;
+    }
+
+    // 7.) how often has a component been updated (over all commits) => e.g., XQ05
+    long query07() {
+
+        // excluding count of updates for already deleted artifacts of XQ05
+        String cmd =
+            "select sum(eval('history.revisions.size() - 1')) as changeCount from Vcdm where kks3 = 'XQ05'";
+
+
+        // including count of updates for already deleted artifacts of XQ05
+        // String cmd =
+        //       "select sum(eval('revisions.size() - 1')) as changeCount from VcdmHistory where last.kks3 = 'XQ05'";
+
+        long before = System.currentTimeMillis();
+
+        query(cmd);
+
+        long after = System.currentTimeMillis();
+        return after - before;
+    }
+
 
     void recordCounts(String... classes) {
         System.out.println("gathering records statistics");
-        for (String clazz : new String[] { "Commit", "Revision", "Eplan", "Vcdm", "Opm",
-                                           "EplanHistory", "VcdmHistory", "OpmHistory"}) {
+        for (String clazz : new String[] { "Commit", "Eplan", "Vcdm", "Opm",
+                "EplanRevision", "VcdmRevision", "OpmRevision", "EplanHistory", "VcdmHistory", "OpmHistory"}) {
             String recordCount = querySingle("select count(*) from " + clazz).toString();
             append(RECORD_COUNTS, clazz, recordCount);
         }
@@ -235,8 +378,13 @@ public class Benchmarking {
         helper.setPassword("admin");
         helper.setStorageType("plocal");
 
-        if (EMBEDDED_MODE)
+        if (EMBEDDED_MODE) {
+            try {
+                // try to delete the database folder before create or overwrite to avoid restore if something failed
+                FileUtils.deleteDirectory(Paths.get(_pathDatabase, DATABASE_NAME).toFile());
+            } catch (IOException e) { }
             helper.setConnectionURL("plocal:" + _pathDatabase);
+        }
         else
             helper.setConnectionURL("remote:localhost");
 
@@ -255,6 +403,26 @@ public class Benchmarking {
         generator.addModel(Eplan.class);
         generator.addModel(Vcdm.class);
         generator.addModel(Opm.class);
+
+        if (CREATE_INDICES) {
+
+            OSchema schema = database.getMetadata().getSchema();
+
+            schema.getClass("Eplan").createProperty("signal_number", OType.STRING);
+            schema.getClass("Eplan").createIndex(
+                    "idx_Eplan_signal_number", OClass.INDEX_TYPE.NOTUNIQUE_HASH_INDEX, "signal_number");
+
+            schema.getClass("Vcdm").createProperty("kks3", OType.STRING);
+            schema.getClass("Vcdm").createIndex(
+                    "idx_Vcdm_kks3", OClass.INDEX_TYPE.NOTUNIQUE_HASH_INDEX, "kks3");
+
+            schema.getClass("VcdmRevision").createProperty("kks3", OType.STRING);
+            schema.getClass("VcdmRevision").createIndex(
+                    "idx_VcdmRevision_kks3", OClass.INDEX_TYPE.NOTUNIQUE_HASH_INDEX, "kks3");
+        }
+
+
+
         database.close();
 
         // create service and connect to database
@@ -284,7 +452,8 @@ public class Benchmarking {
 
 
     List<ODocument> query(String orientSql) {
-        return (List<ODocument>) _service.nativeQuery(orientSql);
+        List<ODocument> result = (List<ODocument>)_service.nativeQuery(orientSql);
+        return result;
     }
 
     Object querySingle(String orientSql) {

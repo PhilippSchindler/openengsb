@@ -57,7 +57,7 @@ public class SchemaGenerator {
 
         V = schema.getOrCreateClass("V");
         E = schema.getOrCreateClass("E");
-        revision = schema.createClass("Revision", V);
+        revision = schema.createAbstractClass("Revision", V);
         commit = schema.createClass("Commit", V);
         relationship = schema.createClass("Relationship", V);
         history = schema.createAbstractClass("History", V);
@@ -112,9 +112,11 @@ public class SchemaGenerator {
         if (superclass == Object.class) {
             schema.createClass(modelName, entity);
             schema.createClass(modelName + "History", history);
+            schema.createClass(modelName + "Revision", revision);
         } else {
             schema.createClass(modelName, schema.getClass(superclass.getSimpleName()));
             schema.createClass(modelName + "History", schema.getClass(superclass.getSimpleName() + "History"));
+            schema.createClass(modelName + "Revision", schema.getClass(superclass.getSimpleName() + "Revision"));
         }
     }
 }

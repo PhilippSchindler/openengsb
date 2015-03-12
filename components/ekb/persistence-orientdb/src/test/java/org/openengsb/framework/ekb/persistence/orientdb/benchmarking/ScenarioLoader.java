@@ -55,18 +55,18 @@ public class ScenarioLoader {
             String[] parts = line.split(";");
 
             Eplan eplan = new Eplan();
-            eplan.setRID(parts[0]);
+            eplan.setRID(Benchmarking.EPLAN_ID_PREFIX + parts[0]);
             eplan.setSignal_number(parts[1]);
             eplan.setFunc_text(parts[2]);
             eplan.setAddress(parts[3]);
 
             Vcdm vcdm = new Vcdm(eplan);
-            // set record id based on the id of eplan - change orientdb cluster by 2 (gives cluster of vcdm)
-            vcdm.setRID((Integer.parseInt(eplan.getRID().split(":")[0]) + 2) + ":" + eplan.getRID().split(":")[1]);
+            // set record id based on the id of eplan - change orientdb cluster by 3 (gives cluster of vcdm)
+            vcdm.setRID(Benchmarking.VCDM_ID_PREFIX + parts[0]);
 
             Opm opm = new Opm(vcdm);
-            // set record id based on the id of eplan - change orientdb cluster by 4 (gives cluster of opm)
-            opm.setRID((Integer.parseInt(eplan.getRID().split(":")[0]) + 4) + ":" + eplan.getRID().split(":")[1]);
+            // set record id based on the id of eplan - change orientdb cluster by 6 (gives cluster of opm)
+            opm.setRID(Benchmarking.OPM_ID_PREFIX + parts[0]);
 
             commit.addOperation(new Operation(operationType, eplan));
             commit.addOperation(new Operation(operationType, vcdm));

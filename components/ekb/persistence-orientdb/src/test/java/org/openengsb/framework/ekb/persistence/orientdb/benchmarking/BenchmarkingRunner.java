@@ -15,7 +15,8 @@ public class BenchmarkingRunner {
     public void setUp()
     {
         benchmarking = new Benchmarking("F:\\orientdb-embedded",
-            "C:\\Users\\sp\\Desktop\\benchmark-instances", "C:\\Users\\sp\\Desktop\\benchmark-results", 100);
+            "C:\\Users\\sp\\Desktop\\benchmark-instances", "C:\\Users\\sp\\Desktop\\benchmark-results",
+                100, 1000, 10000, 100000, 1000000);
     }
 
 
@@ -26,7 +27,8 @@ public class BenchmarkingRunner {
 
     @Test
     public void run1Small() {
-        benchmarking.runScenario(1, 100);
+        benchmarking.createOrOverwriteResultFiles();
+        benchmarking.runScenario(1, 10000);
     }
 
 }

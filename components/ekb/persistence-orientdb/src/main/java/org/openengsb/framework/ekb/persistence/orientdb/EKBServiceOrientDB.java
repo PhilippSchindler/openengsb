@@ -86,8 +86,8 @@ public class EKBServiceOrientDB {
         OpenEngSBModel model = operation.getModel();
         String modelClassName = getModelClassName(model);
         ODocument v_currentEntity = database.newInstance(modelClassName);
-        ODocument v_history = database.newInstance(getModelClassName(model) + "History");
-        ODocument v_currentRevision = database.newInstance("Revision");
+        ODocument v_history = database.newInstance(modelClassName + "History");
+        ODocument v_currentRevision = database.newInstance(modelClassName + "Revision");
 
         // adding the newly created entity to the map of cachedDocuments, so we can use the document instance it in the
         // current commit for inserting relationships
@@ -129,9 +129,10 @@ public class EKBServiceOrientDB {
 
     private void performUpdateOperation(Operation operation, ODocument v_commit, Map<String, List<ORID>> updatedRIDs) {
         OpenEngSBModel model = operation.getModel();
+        String modelClassName = getModelClassName(model);
         ODocument v_currentEntity = loadCurrentDocumentForModel(model);
         ODocument v_history = v_currentEntity.field("history");
-        ODocument v_currentRevision = database.newInstance("Revision");
+        ODocument v_currentRevision = database.newInstance(modelClassName + "Revision");
         ODocument v_previousRevision = v_history.field("last");
 
         // update current version (overwrite data)
