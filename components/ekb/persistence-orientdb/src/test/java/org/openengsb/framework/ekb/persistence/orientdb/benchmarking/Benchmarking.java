@@ -319,33 +319,10 @@ public class Benchmarking {
             System.exit(1);
         }
 
-        // create schema
         ODatabaseDocument database = helper.getConnectionNoTx();
-        SchemaGenerator generator = new SchemaGenerator();
-        generator.setDatabase(database);
-        generator.generateVersioningSchema();
-        generator.addModel(Eplan.class);
-        generator.addModel(Vcdm.class);
-        generator.addModel(Opm.class);
 
-        if (_createIndices) {
-
-            OSchema schema = database.getMetadata().getSchema();
-
-            schema.getClass("Eplan").createProperty("signal_number", OType.STRING);
-            schema.getClass("Eplan").createIndex(
-                    "idx_Eplan_signal_number", OClass.INDEX_TYPE.UNIQUE_HASH_INDEX, "signal_number");
-
-            schema.getClass("Vcdm").createProperty("kks3", OType.STRING);
-            schema.getClass("Vcdm").createIndex(
-                    "idx_Vcdm_kks3", OClass.INDEX_TYPE.NOTUNIQUE_HASH_INDEX, "kks3");
-
-            // schema.getClass("VcdmRevision").createProperty("kks3", OType.STRING);
-            // schema.getClass("VcdmRevision").createIndex(
-            //       "idx_VcdmRevision_kks3", OClass.INDEX_TYPE.NOTUNIQUE_HASH_INDEX, "kks3");
-        }
-
-
+        createSchema(database);
+        createIndices(database);
 
         database.close();
 
@@ -353,6 +330,26 @@ public class Benchmarking {
         _service = new EKBServiceOrientDB();
         _service.setDatabase(helper.getConnection());
         _service.setUIIDIndexSupportEnabled(false);
+    }
+
+    void createSchema(ODatabaseDocument database) {
+        SchemaGenerator generator = new SchemaGenerator();
+        generator.setDatabase(database);
+        generator.generateVersioningSchema();
+        generator.addModel(Eplan.class);
+        generator.addModel(Vcdm.class);
+        generator.addModel(Opm.class);
+    }
+    void createIndices(ODatabaseDocument database) {
+        if (_createIndices) {
+            OSchema schema = database.getMetadata().getSchema();
+            schema.getClass("Eplan").createProperty("signal_number", OType.STRING)
+                    .createIndex(OClass.INDEX_TYPE.UNIQUE);
+            schema.getClass("Vcdm").createProperty("kks3", OType.STRING)
+                    .createIndex(OClass.INDEX_TYPE.NOTUNIQUE);
+            schema.getClass("VcdmRevision").createProperty("kks3", OType.STRING)
+                    .createIndex(OClass.INDEX_TYPE.NOTUNIQUE);
+        }
     }
 
     void closeDatabase() {
