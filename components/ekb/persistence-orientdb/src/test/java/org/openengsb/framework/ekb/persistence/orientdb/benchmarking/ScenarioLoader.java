@@ -49,7 +49,7 @@ public class ScenarioLoader {
             String[] parts = line.split(";");
 
             Signal signal = new Signal();
-            signal.setRID(parts[0]);
+            signal.setRID("#14:" + parts[0]);
             signal.setSigNr(parts[1]);
             signal.setFuncText(parts[2]);
             signal.setAddress(parts[3]);
