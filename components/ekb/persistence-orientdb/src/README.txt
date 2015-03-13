@@ -55,10 +55,11 @@ After the steps above do:
 1. open a terminal windows
 2. change to directory openengsb\components\ekb\persistence-orientdb
 3. run: mvn clean install
-4. run: mvn test -Xmx6g -Dtest=BenchmarkingRunner
-   or   mvn test -Xmx6g -Dtest=BenchmarkingRunner -Dstorage.useWAL=false       (not using write ahead log)
+4. run: mvn test -Dtest=BenchmarkingRunner
+   or   mvn test -Dtest=BenchmarkingRunner -Dstorage.useWAL=false       (not using write ahead log)
 
 When aborting the run of the benchmark make sure that the process is correctly terminated.
 
-Do not increase heap memory size all the way up - OrientDB uses the remaining ram as disk cache.
-However about 6GB are required for size 1000000 benchmarks (4GB lead to a out of memory error).
+Do not increase heap memory size (specified in maven surefire plugin, pom.xml) all the way up - OrientDB uses the
+remaining ram as disk cache. However about 6GB are required for size 1000000 benchmarks
+(4GB lead to a out of memory error).
