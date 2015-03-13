@@ -5,10 +5,7 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.commons.io.FileUtils;
-import org.junit.runner.RunWith;
-import org.mockito.runners.MockitoJUnitRunner;
 import org.openengsb.framework.ekb.persistence.orientdb.EKBCommit;
 import org.openengsb.framework.ekb.persistence.orientdb.EKBServiceOrientDB;
 import org.openengsb.framework.ekb.persistence.orientdb.OrientDBHelper;
@@ -23,10 +20,14 @@ import java.util.List;
 
 public class Benchmarking {
 
+    EKBServiceOrientDB _service;
+
     String _pathDatabase;
     String _pathTestdata;
     String _pathResults;
     int[] _scenarioSizes;
+    boolean _useEmbeddedMode = true;
+    boolean _createIndices = true;
 
     int _currentScenario;
     int _currentScenarioSize;
@@ -37,58 +38,28 @@ public class Benchmarking {
     String RECORD_COUNTS      = "record-counts.csv";
     String DISK_USAGE         = "disk-usage.csv";
     String DISK_USAGE_DETAILS = "disk-usage-details.csv";
+    String DATABASE_NAME      = "engineering-db";
 
-    final String DATABASE_NAME = "engineering-db";
-    final boolean EMBEDDED_MODE = true;
-    final boolean CREATE_INDICES = true;
-
-    public final String COMMIT_ID_PREFIX = "#11:"; // cluster id for commit vertices
+    public static final String COMMIT_ID_PREFIX = "#11:"; // cluster id for commit vertices
     public static final String EPLAN_ID_PREFIX  = "#13:";
     public static final String VCDM_ID_PREFIX   = "#16:";
     public static final String OPM_ID_PREFIX    = "#19:";
 
 
-    EKBServiceOrientDB _service;
-
-
-    public Benchmarking(String[] cmdArgs) throws IllegalArgumentException {
-        if (!parseArgs(cmdArgs)) {
-            printUsage();
-            throw new IllegalArgumentException();
-        }
-
-        COMMIT_PERFORMANCE = Paths.get(_pathResults, COMMIT_PERFORMANCE).toString();
-        QUERY_PERFORMANCE  = Paths.get(_pathResults, QUERY_PERFORMANCE).toString();
-        RECORD_COUNTS      = Paths.get(_pathResults, RECORD_COUNTS).toString();
-        DISK_USAGE         = Paths.get(_pathResults, DISK_USAGE).toString();
-        DISK_USAGE_DETAILS = Paths.get(_pathResults, DISK_USAGE_DETAILS).toString();
-    }
-
-    public Benchmarking(String pathDatabase, String pathTestdata, String pathResults, int... scenarioSizes) {
+    public Benchmarking(String pathDatabase, String pathTestdata, String pathResults, boolean useEmbeddedMode,
+            boolean createIndices, int... scenarioSizes) {
         _pathDatabase = pathDatabase;
         _pathTestdata = pathTestdata;
         _pathResults = pathResults;
         _scenarioSizes = scenarioSizes;
+        _useEmbeddedMode = useEmbeddedMode;
+        _createIndices = createIndices;
 
         COMMIT_PERFORMANCE = Paths.get(_pathResults, COMMIT_PERFORMANCE).toString();
         QUERY_PERFORMANCE  = Paths.get(_pathResults, QUERY_PERFORMANCE).toString();
         RECORD_COUNTS      = Paths.get(_pathResults, RECORD_COUNTS).toString();
         DISK_USAGE         = Paths.get(_pathResults, DISK_USAGE).toString();
         DISK_USAGE_DETAILS = Paths.get(_pathResults, DISK_USAGE_DETAILS).toString();
-    }
-
-    public static void main(String[] args) {
-
-        Benchmarking benchmarking = null;
-        try {
-            benchmarking = new Benchmarking(args);
-        }
-        catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        }
-
-        if (benchmarking != null)
-            benchmarking.runAll();
     }
 
     public void runAll() {
@@ -159,53 +130,6 @@ public class Benchmarking {
     }
 
 
-    void printUsage() {
-        System.out.println("Usage:");
-        System.out.println("   benchmarking <path-for-database> <path-for-testdata> <path-for-results> <[ instance sizes ]>");
-        System.out.println("Sample: ");
-        System.out.println("   benchmarking C:\\OrientDB C:\\instances C:\\results 5000 10000 50000 1000000");
-    }
-
-    boolean parseArgs(String[] args) {
-
-        if (args.length < 3) {
-            System.out.println("Arguments missing!");
-            return false;
-        }
-
-        _pathDatabase = args[0];
-        _pathTestdata = args[1];
-        _pathResults  = args[2];
-
-        _scenarioSizes = new int[args.length - 3];
-        for (int i = 0; i < _scenarioSizes.length; i++) {
-            _scenarioSizes[i] = Integer.parseInt(args[3 + i]);
-        }
-
-
-        if (!new File(_pathDatabase).exists()) {
-            System.out.println("No valid directory for database found!");
-            return false;
-        }
-        if (!new File(_pathTestdata).exists()) {
-            System.out.println("No valid directory for test instances found!");
-            return false;
-        }
-        for (int s : _scenarioSizes) {
-            if (!Paths.get(_pathTestdata, String.valueOf(s)).toFile().exists()) {
-                System.out.println("Test instances missing - use genernate_all.py for creating!");
-                return false;
-            }
-        }
-
-        if (!new File(_pathResults).exists()) {
-            System.out.println("No valid directory for results found!");
-            return false;
-        }
-
-        return true;
-    }
-
 
     void queries() {
         System.out.println("running queries");
@@ -267,7 +191,7 @@ public class Benchmarking {
         return after - before;
     }
 
-    // number of elements grouped by component and commit
+    // number of elements grouped by component and commit                   ???
     long query04() {
 
         String cmd =
@@ -285,7 +209,7 @@ public class Benchmarking {
         return after - before;
     }
 
-    // 5.) retrieve all elements of "*.XQ05" after last commit
+    // 5.) retrieve all elements of "*.XQ05" after last commit              ???
     long query05() {
 
         String commitId = COMMIT_ID_PREFIX + _currentCommit;
@@ -378,7 +302,7 @@ public class Benchmarking {
         helper.setPassword("admin");
         helper.setStorageType("plocal");
 
-        if (EMBEDDED_MODE) {
+        if (_useEmbeddedMode) {
             try {
                 // try to delete the database folder before create or overwrite to avoid restore if something failed
                 FileUtils.deleteDirectory(Paths.get(_pathDatabase, DATABASE_NAME).toFile());
@@ -404,21 +328,21 @@ public class Benchmarking {
         generator.addModel(Vcdm.class);
         generator.addModel(Opm.class);
 
-        if (CREATE_INDICES) {
+        if (_createIndices) {
 
             OSchema schema = database.getMetadata().getSchema();
 
             schema.getClass("Eplan").createProperty("signal_number", OType.STRING);
             schema.getClass("Eplan").createIndex(
-                    "idx_Eplan_signal_number", OClass.INDEX_TYPE.NOTUNIQUE_HASH_INDEX, "signal_number");
+                    "idx_Eplan_signal_number", OClass.INDEX_TYPE.UNIQUE_HASH_INDEX, "signal_number");
 
             schema.getClass("Vcdm").createProperty("kks3", OType.STRING);
             schema.getClass("Vcdm").createIndex(
                     "idx_Vcdm_kks3", OClass.INDEX_TYPE.NOTUNIQUE_HASH_INDEX, "kks3");
 
-            schema.getClass("VcdmRevision").createProperty("kks3", OType.STRING);
-            schema.getClass("VcdmRevision").createIndex(
-                    "idx_VcdmRevision_kks3", OClass.INDEX_TYPE.NOTUNIQUE_HASH_INDEX, "kks3");
+            // schema.getClass("VcdmRevision").createProperty("kks3", OType.STRING);
+            // schema.getClass("VcdmRevision").createIndex(
+            //       "idx_VcdmRevision_kks3", OClass.INDEX_TYPE.NOTUNIQUE_HASH_INDEX, "kks3");
         }
 
 

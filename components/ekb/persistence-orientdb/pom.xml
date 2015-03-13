@@ -15,7 +15,7 @@
     <properties>
         <bundle.symbolicName>org.openengsb.framework.ekb.persistence.orientdb</bundle.symbolicName>
         <bundle.namespace>org.openengsb.core.ekb.persistence.orientdb</bundle.namespace>
-        <orientdb.version>2.0.3</orientdb.version>
+        <orientdb.version>2.0.5</orientdb.version>
         <blueprints.version>2.5.0</blueprints.version>
     </properties>
 
