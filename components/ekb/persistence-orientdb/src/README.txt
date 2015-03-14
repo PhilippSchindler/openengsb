@@ -1,7 +1,7 @@
 === Generating testdata ===
 
 1. Create a folder where the test instances should be stored.
-2. Copy the files generate_all.py and testdata.py into this folder.
+2. Copy the files generate_all.py and testdata.py from /test/python into this folder.
 3. Make sure Python27 AND! Python3x are installed.
 4. Check (and modify) the path for Python27 in the file generate_all.py
 5. Alter "instancesPerCommit" at the top of generate_all.py to specified the sizes of the testdata to be generated.
@@ -40,7 +40,7 @@ When using a remote mode, the versions of the installation and the versions in t
 
 See test/benchmarking/BenchmarkingRunner.java.
 
-Path for database location, test instances or results are specfied there. Make sure all of this folder
+Path for database location, test instances or results are specified there. Make sure all of this folder
 exist before running the benchmarks. When using remote mode the database directory can be set to "".
 The directory of the installation always used when in remote mode.
 
