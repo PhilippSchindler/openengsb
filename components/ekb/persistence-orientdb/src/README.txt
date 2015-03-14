@@ -1,5 +1,10 @@
 === Generating testdata ===
 
+The script generate_all.py in /test/python is used a wrapper for /test/python/testdata.py to generate testdata
+for different scenarios. Therefore one first need to make sure testdata.py is running correctly. See
+README_testdata.py.txt for further instructions.
+
+
 1. Create a folder where the test instances should be stored.
 2. Copy the files generate_all.py and testdata.py from /test/python into this folder.
 3. Make sure Python27 AND! Python3x are installed.
