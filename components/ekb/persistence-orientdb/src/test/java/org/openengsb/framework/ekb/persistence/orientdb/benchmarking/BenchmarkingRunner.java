@@ -16,7 +16,7 @@ public class BenchmarkingRunner {
     static final String TEST_DATA_PATH = "C:\\Users\\sp\\Desktop\\benchmark-instances";
     static final String RESULTS_PATH   = "C:\\Users\\sp\\Desktop\\benchmark-results";
 
-//    static final int[] AVAILABLE_SCENARIO_SIZES = new int[] { 1000000 };
+//    static final int[] AVAILABLE_SCENARIO_SIZES = new int[] { 1000 };
     static final int[] AVAILABLE_SCENARIO_SIZES = new int[] { 100, 1000, 10000, 100000, 1000000 };
 
     static final boolean USE_EMBEDDED_MODE = true;

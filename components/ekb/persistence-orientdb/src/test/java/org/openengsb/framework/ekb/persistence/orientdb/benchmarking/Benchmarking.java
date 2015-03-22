@@ -26,8 +26,8 @@ public class Benchmarking {
     String _pathTestdata;
     String _pathResults;
     int[] _scenarioSizes;
-    boolean _useEmbeddedMode = true;
-    boolean _createIndices = true;
+    boolean _useEmbeddedMode;
+    boolean _createIndices;
 
     int _currentScenario;
     int _currentScenarioSize;
@@ -148,8 +148,8 @@ public class Benchmarking {
     long query01() {
 
         String cmd =
-            "select sum(inserts_eplan.size()), sum(updates_eplan.size()), sum(deletes_eplan.size()) " +
-            "from Commit";
+                "select sum(inserts_eplan.size()), sum(updates_eplan.size()), sum(deletes_eplan.size()) " +
+                        "from Commit";
 
         long before = System.currentTimeMillis();
 
@@ -164,7 +164,7 @@ public class Benchmarking {
     long query02() {
 
         String cmd =
-            "select @rid, inserts_eplan.size(), updates_eplan.size(), deletes_eplan.size() from Commit";
+                "select @rid, inserts_eplan.size(), updates_eplan.size(), deletes_eplan.size() from Commit";
 
         long before = System.currentTimeMillis();
 
@@ -180,8 +180,8 @@ public class Benchmarking {
 
         String commitId = COMMIT_ID_PREFIX + _currentCommit;
         String cmd = String.format(
-            "select inserts_eplan.size(), updates_eplan.size(), deletes_eplan.size() from %s",
-            commitId);
+                "select inserts_eplan.size(), updates_eplan.size(), deletes_eplan.size() from %s",
+                commitId);
 
         long before = System.currentTimeMillis();
 
@@ -191,15 +191,11 @@ public class Benchmarking {
         return after - before;
     }
 
-    // number of elements grouped by component and commit                   ???
+
+    // number of elements (currently) grouped by component and commit
     long query04() {
 
-        String cmd =
-            "select @rid as commit, $i as insertsByComponent, $u as updatesByComponent, $d as deletesByComponent from Commit "
-          + "let "
-          + "    $i = (select value as comp, count(*) as inserts from (select expand(inserts_vcdm.last.kks3) from $parent.$current) group by value)), "
-          + "    $u = (select value as comp, count(*) as updates from (select expand(updates_vcdm.kks3) from $parent.$current) group by value)), "
-          + "    $d = (select value as comp, count(*) as deletes from (select expand(deletes_vcdm.last.kks3) from $parent.$current) group by value)) ";
+        String cmd = "select kks3, commit, count(*) from Vcdm group by commit, kks3";
 
         long before = System.currentTimeMillis();
 
@@ -209,18 +205,11 @@ public class Benchmarking {
         return after - before;
     }
 
-    // 5.) retrieve all elements of "*.XQ05" after last commit              ???
+    // 5.) retrieve all (current) elements of "*.XQ05" after last commit
     long query05() {
 
-        String commitId = COMMIT_ID_PREFIX + _currentCommit;
-
-        String cmd = String.format(
-            "select expand($combined) "
-          + "let $inserts = (select from ( select expand(inserts_vcdm.last) from %s) where kks3 = 'XQ05'), "
-          + "    $updates = (select from ( select expand(inserts_vcdm)      from %s) where kks3 = 'XQ05'), "
-          + "    $deletes = (select from ( select expand(inserts_vcdm.last) from %s) where kks3 = 'XQ05'), "
-          + "    $combined = unionall( $inserts, $updates, $deletes )",
-            commitId, commitId, commitId);
+        String cmd =
+                "select from Vcdm where kks3 = 'XQ05'";
 
         long before = System.currentTimeMillis();
 
@@ -235,8 +224,8 @@ public class Benchmarking {
 
         // if we know there is a current version
         String cmd =
-            "select eval('history.revisions.size() - 1') as changeCount from Eplan " +
-            "where signal_number = '13.ACA00.CE000.XQ67'";
+                "select eval('history.revisions.size() - 1') as changeCount from Eplan " +
+                        "where signal_number = '13.ACA00.CE000.XQ67'";
 
         // if we don't know if it has been deleted
         // String cmd =
@@ -256,7 +245,7 @@ public class Benchmarking {
 
         // excluding count of updates for already deleted artifacts of XQ05
         String cmd =
-            "select sum(eval('history.revisions.size() - 1')) as changeCount from Vcdm where kks3 = 'XQ05'";
+                "select sum(eval('history.revisions.size() - 1')) as changeCount from Vcdm where kks3 = 'XQ05'";
 
 
         // including count of updates for already deleted artifacts of XQ05
@@ -270,6 +259,27 @@ public class Benchmarking {
         long after = System.currentTimeMillis();
         return after - before;
     }
+
+
+
+    // addtional query: number of inserts,updates,deletes grouped by component and commit
+    long query08() {
+
+        String cmd =
+                "select @rid as commit, $i as insertsByComponent, $u as updatesByComponent, $d as deletesByComponent from Commit "
+                        + "let "
+                        + "    $i = (select value as comp, count(*) as inserts from (select expand(inserts_vcdm.last.kks3) from $parent.$current) group by value)), "
+                        + "    $u = (select value as comp, count(*) as updates from (select expand(updates_vcdm.kks3) from $parent.$current) group by value)), "
+                        + "    $d = (select value as comp, count(*) as deletes from (select expand(deletes_vcdm.last.kks3) from $parent.$current) group by value)) ";
+
+        long before = System.currentTimeMillis();
+
+        query(cmd);
+
+        long after = System.currentTimeMillis();
+        return after - before;
+    }
+
 
 
     void recordCounts(String... classes) {
@@ -346,8 +356,6 @@ public class Benchmarking {
             schema.getClass("Eplan").createProperty("signal_number", OType.STRING)
                     .createIndex(OClass.INDEX_TYPE.UNIQUE);
             schema.getClass("Vcdm").createProperty("kks3", OType.STRING)
-                    .createIndex(OClass.INDEX_TYPE.NOTUNIQUE);
-            schema.getClass("VcdmRevision").createProperty("kks3", OType.STRING)
                     .createIndex(OClass.INDEX_TYPE.NOTUNIQUE);
         }
     }

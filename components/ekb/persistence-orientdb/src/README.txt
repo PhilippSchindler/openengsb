@@ -60,8 +60,8 @@ After the steps above do:
 1. open a terminal windows
 2. change to directory openengsb\components\ekb\persistence-orientdb
 3. run: mvn clean install
-4. run: mvn test -Dtest=BenchmarkingRunner
-   or   mvn test -Dtest=BenchmarkingRunner -Dstorage.useWAL=false       (not using write ahead log)
+4. run: mvn test -Dtest=BenchmarkingRunner -Dstorage.useWAL=false       (not using write ahead log)
+        or  mvn test -Dtest=BenchmarkingRunner                          (one transaction per commit)
 
 When aborting the run of the benchmark make sure that the process is correctly terminated.
 

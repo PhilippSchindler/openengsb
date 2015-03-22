@@ -56,7 +56,7 @@ public class EKBServiceOrientDB {
 
     // if enabled, the current version of all models, the history of all deleted model
     // the current version of relationships and the revision of deleted relationships can be directly access by an index
-    private boolean isUIIDIndexSupportEnabled = true;
+    private boolean isUIIDIndexSupportEnabled = false;
 
     public boolean isRidSupportEnabled() {
         return isRIDSupportEnabled;

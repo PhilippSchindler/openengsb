@@ -185,31 +185,7 @@
             <version>${orientdb.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.orientechnologies</groupId>
-            <artifactId>orientdb-core</artifactId>
-            <version>${orientdb.version}</version>
-            <type>bundle</type>
-        </dependency>
-        <!-- INCLUDE THIS IF YOU'RE CONNECTING TO THE SERVER THROUGH THE REMOTE ENGINE -->
-        <dependency>
-            <groupId>com.orientechnologies</groupId>
-            <artifactId>orientdb-client</artifactId>
-            <version>${orientdb.version}</version>
-            <type>bundle</type>
-        </dependency>
-        <!-- END REMOTE ENGINE DEPENDENCY -->
-        <dependency>
-            <groupId>com.orientechnologies</groupId>
-            <artifactId>orientdb-graphdb</artifactId>
-            <version>${orientdb.version}</version>
-        </dependency>
 
-        <dependency>
-            <groupId>com.tinkerpop.blueprints</groupId>
-            <artifactId>blueprints-core</artifactId>
-            <version>${blueprints.version}</version>
-        </dependency>
 
     </dependencies>
 
