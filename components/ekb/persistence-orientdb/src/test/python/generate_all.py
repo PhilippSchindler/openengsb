@@ -4,7 +4,7 @@ import subprocess
 import csv
 
 
-instancesPerCommit = [ 100, 1000, 10000, 100000, 100000, 1000000 ]
+instancesPerCommit = [ 100, 1000, 10000, 100000, 100000, 500000, 1000000 ]
 
 ridPrefix = ""
 

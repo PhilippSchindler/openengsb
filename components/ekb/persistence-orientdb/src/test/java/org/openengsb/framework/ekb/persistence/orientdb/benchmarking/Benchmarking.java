@@ -305,6 +305,9 @@ public class Benchmarking {
 
         System.out.println("reseting database, establishing connection");
 
+        // quick fix for orientdb on failure to create a new database (some orientdb bug)
+        DATABASE_NAME = "engineering-db_" + _currentScenario + "_" + _currentScenarioSize;
+
         // create database
         OrientDBHelper helper = new OrientDBHelper();
         helper.setDatabaseName(DATABASE_NAME);
